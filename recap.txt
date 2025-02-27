@@ -1,0 +1,128 @@
+1. Organisation du Projet
+1.1 Structure des fichiers
+Une bonne organisation des fichiers facilitera le développement et la maintenance du projet.
+
+makefile
+Copier
+Modifier
+ft_irc/
+│── src/
+│   │── main.cpp             # Point d'entrée du programme
+│   │── Server.cpp           # Classe principale du serveur
+│   │── Client.cpp           # Classe représentant un client connecté
+│   │── CommandHandler.cpp   # Gère les commandes IRC
+│   │── Channel.cpp          # Gère les canaux IRC
+│   │── Utils.cpp            # Fonctions utilitaires
+│
+│── include/
+│   │── Server.hpp
+│   │── Client.hpp
+│   │── CommandHandler.hpp
+│   │── Channel.hpp
+│   │── Utils.hpp
+│
+│── Makefile                 # Compilation du projet
+│── README.md                # Explication du projet et guide d'utilisation
+2. Décomposition du projet en modules
+Le projet peut être divisé en plusieurs grandes parties, chacune ayant une responsabilité spécifique.
+
+2.1 Initialisation du serveur
+✅ Objectif : Créer un serveur qui écoute les connexions et accepte plusieurs clients.
+
+🔹 Fichiers : Server.hpp / Server.cpp
+
+🔹 Tâches :
+
+Créer une socket TCP et la mettre en mode écoute sur le port donné.
+Gérer plusieurs clients en mode non bloquant avec poll().
+Gérer l'acceptation des nouvelles connexions et stocker les clients connectés.
+2.2 Gestion des clients
+✅ Objectif : Suivre et gérer les clients connectés.
+
+🔹 Fichiers : Client.hpp / Client.cpp
+
+🔹 Tâches :
+
+Stocker les informations des clients :
+Socket associée
+Nickname
+Username
+État d'authentification (connecté ou non)
+Lire et stocker les messages entrants des clients.
+Vérifier la commande initiale (PASS, NICK, USER) pour l'authentification.
+2.3 Gestion des commandes IRC
+✅ Objectif : Implémenter les commandes essentielles du protocole IRC.
+
+🔹 Fichiers : CommandHandler.hpp / CommandHandler.cpp
+
+🔹 Tâches :
+
+Lire et interpréter les messages reçus des clients.
+Implémenter les commandes principales :
+/NICK : Changer le pseudonyme d’un client.
+/USER : Définir l’utilisateur.
+/JOIN : Rejoindre un canal.
+/PART : Quitter un canal.
+/PRIVMSG : Envoyer un message privé.
+/KICK : Expulser un utilisateur d’un canal.
+/MODE : Modifier les paramètres d’un canal.
+/INVITE : Inviter un utilisateur dans un canal.
+/TOPIC : Définir un sujet pour un canal.
+Vérifier la validité des arguments et gérer les erreurs.
+2.4 Gestion des canaux
+✅ Objectif : Permettre la création et la gestion des canaux IRC.
+
+🔹 Fichiers : Channel.hpp / Channel.cpp
+
+🔹 Tâches :
+
+Stocker les utilisateurs connectés à un canal.
+Gérer les opérateurs du canal.
+Implémenter les modes (+i, +t, +k, +o, +l).
+Transmettre les messages envoyés dans le canal à tous ses membres.
+2.5 Communication réseau
+✅ Objectif : Assurer une communication fluide entre le serveur et les clients.
+
+🔹 Fichiers : Server.cpp et Utils.cpp
+
+🔹 Tâches :
+
+Gérer la réception et l’envoi de messages avec poll().
+Lire et reconstruire correctement les messages fragmentés.
+Fermer proprement les connexions lorsqu’un client se déconnecte.
+2.6 Gestion des erreurs et logs
+✅ Objectif : Assurer un bon suivi des événements et gérer les erreurs.
+
+🔹 Fichiers : Utils.hpp / Utils.cpp
+
+🔹 Tâches :
+
+Implémenter un système de logs pour suivre l’activité du serveur.
+Gérer proprement les déconnexions inattendues.
+Vérifier les messages reçus pour éviter les injections de données.
+2.7 Test et validation
+✅ Objectif : Tester toutes les fonctionnalités du serveur.
+
+🔹 Tâches :
+
+Tester la connexion avec un client IRC (ex : HexChat, Weechat).
+Vérifier le bon fonctionnement de chaque commande (NICK, JOIN, PRIVMSG, etc.).
+Simuler des paquets fragmentés pour tester la robustesse du parsing.
+Vérifier la gestion des erreurs et des connexions multiples.
+3. Feuille de Route
+Phase 1 : Mise en place du serveur de base
+✅ Implémenter la gestion des connexions (Server.cpp).
+✅ Implémenter la gestion des clients (Client.cpp).
+✅ Tester la connexion avec un client IRC.
+
+Phase 2 : Ajout des commandes IRC de base
+✅ Ajouter /NICK, /USER, /JOIN, /PART, /PRIVMSG.
+✅ Gérer la transmission des messages dans les canaux.
+
+Phase 3 : Ajout des fonctionnalités avancées
+✅ Ajouter /KICK, /INVITE, /TOPIC, /MODE.
+✅ Implémenter la gestion des opérateurs et des permissions.
+
+Phase 4 : Tests et optimisation
+✅ Tester en conditions réelles avec plusieurs clients.
+✅ Vérifier la gestion des erreurs et la stabilité du serveur.
