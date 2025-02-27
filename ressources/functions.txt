@@ -1,0 +1,10 @@
+poll() : En gros c'est une fonction qui "surveille" des fd, plus précisement des variables de type pollfd.
+	 pollfd c'est une struct, elle ressemble à ça : int fd          -> le fd
+						        short events    -> les évènements à détecter
+						        short revents   -> les évènements qui ont eu lieu après l'appel à la fonction
+						        
+	Ca sert pour gérer plusieurs connexions, là dans le code on a fait un vecteur de pollfd, et comme ça poll() peut surveiller les  différents éléments du vecteurs
+
+--------------------------
+
+
