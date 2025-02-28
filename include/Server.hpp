@@ -8,8 +8,6 @@
 #include "Client.hpp"
 #include "Channel.hpp"
 
-class Client;
-
 class Server
 {
 public:
@@ -22,6 +20,7 @@ public:
     int const& getPort() const;
 private:
     int server_fd;
+    std::vector<struct pollfd>& pollfds;
     int port;
     std::string password;
     std::map<int, Client*> _ClientBook;
@@ -31,5 +30,8 @@ private:
     void handleNewConnection();
     void handleClientMessage(size_t index);
 };
-
+/*addclient fonction();
+delclient();
+addchannels();
+delchannels();*/
 #endif

@@ -11,11 +11,16 @@ std::string Client::getUsername() const {return _Username;}
 std::string Client::getHostname() const {return _Host;}
 void Client::setNickname(std::string &Nickname) {_Nickname = Nickname;}
 void Client::setUsername(std::string &Username) {_Username = Username;}
+
 void Client::authenticate(const std::string &password, const std::string &expectedPassword)
 {
     if (password == expectedPassword)
         _authenticated = true;
     
 }
+
 bool Client::isAuthenticated() const
+{
+    return _authenticated;
+}
 
