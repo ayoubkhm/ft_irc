@@ -38,8 +38,14 @@ int main(int argc, char **argv)
     
     // Création et lancement du serveur
     Server server(port, password);
-    server.run();
-    
+    try
+    {
+        server.run();
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
     std::cout << "Serveur arrêté.\n";
     return 0;
 }
