@@ -17,7 +17,7 @@ class Client {
         bool _authenticated; 
 
     public:
-        Client(int fd, int port, std::string const &host);
+        Client(int fd);
         ~Client();
         Client(Client const& copy);
         Client &operator=(Client const& copy);

@@ -1,6 +1,6 @@
 #include "Client.hpp"
 
-Client::Client(int fd, int port, std::string const &host): _fd(fd), _port(port), _Host(host) {}
+Client::Client(int fd): _fd(fd) {}
 
 Client::~Client() {close(_fd);}
 
