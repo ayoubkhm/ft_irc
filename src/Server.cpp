@@ -12,8 +12,7 @@
 
 extern volatile bool g_running;
 
-Server::Server(int port, const std::string &password)
-    : server_fd(-1), port(port), password(password)
+Server::Server(int port, const std::string &password) : server_fd(-1), port(port), password(password)
 {
     initServer();
 }
@@ -120,6 +119,37 @@ void Server::handleClientMessage(size_t index)
     std::cout << "Message reçu de FD " << pollfds[index].fd << ": " << buffer;
     // Utilisation du module Command pour parser et dispatcher la commande
     parseAndDispatch(pollfds[index].fd, std::string(buffer));
+}
+
+//Fonction qui créé un channel, échoue si le channel existe déjà
+void Server::addChannel(const std::string& channelName) 
+{
+    auto it = _Channels.find(channelName);                                  // Vérifier si le channel existe déjà
+    if (it == _Channels.end())                                              // Si le channel n'existe pas, on le crée et on l'ajoute
+    {
+        Channel newChannel(channelName);
+        _Channels[channelName] = newChannel;
+        std::cout << "Channel créé : " << channelName << "\n";
+    } 
+    else 
+    {
+        std::cout << "Le channel " << channelName << " existe déjà.\n";
+    }
+}
+
+// Supprimer un channel existant
+void Server::removeChannel(const std::string& channelName) 
+{
+    auto it = _Channels.find(channelName);
+    if (it != _Channels.end()) 
+    {
+        _Channels.erase(it);                                                // Si le channel existe, on le supprime
+        std::cout << "Channel " << channelName << " supprimé.\n";
+    } 
+    else 
+    {
+        std::cout << "Le channel " << channelName << " n'existe pas.\n";
+    }
 }
 
 
