@@ -31,9 +31,13 @@ private:
     void initServer();
     void handleNewConnection();
     void handleClientMessage(size_t index);
+
+    //Fonctions pour les channels
+    void addChannel(const std::string &channelName);
+    void removeChannel(const std::string &channelName);
+
+    
 };
 /*addclient fonction();
-delclient();
-addchannels();
-delchannels();*/
+delclient();*/
 #endif
