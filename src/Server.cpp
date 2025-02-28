@@ -125,7 +125,7 @@ void Server::handleClientMessage(size_t index)
 void Server::addChannel(const std::string& channelName) 
 {
     auto it = _Channels.find(channelName);                                  // Vérifier si le channel existe déjà
-    if (it == _Channels.end())                                              // Si le channel n'existe pas, on le crée et on l'ajoute
+    if (it == _Channels.end())                                              // Si le channel n'existe pas, on le crée et on l'ajoute à la map de channels
     {
         Channel newChannel(channelName);
         _Channels[channelName] = newChannel;
@@ -143,7 +143,7 @@ void Server::removeChannel(const std::string& channelName)
     auto it = _Channels.find(channelName);
     if (it != _Channels.end()) 
     {
-        _Channels.erase(it);                                                // Si le channel existe, on le supprime
+        _Channels.erase(it);                                                // Si le channel existe, on le supprime de la map de channels
         std::cout << "Channel " << channelName << " supprimé.\n";
     } 
     else 
@@ -152,6 +152,59 @@ void Server::removeChannel(const std::string& channelName)
     }
 }
 
+void Server::joinChannel(int fd, const std::string& channelName) 
+{
+    auto it = _Channels.find(channelName);
+    if (it == _Channels.end()) 
+    {
+        std::cout << "Le channel " << channelName << " n'existe pas.\n";                            //Quand le channel n'existe pas on ne fait rien.
+        return;                                                                                     //(on peut le créer si vous voulez)
+    } 
+    Channel& channel = it->second;
+    channel.addClient(fd);
+    std::cout << "Le client avec fd " << fd << " a rejoint le channel " << channelName << ".\n";
+}
+
+void Server::kickClient(int fd, const std::string& channelName, int target) 
+{
+    auto it = _Channels.find(channelName);
+
+    if (it == _Channels.end())                                                                      // Gestion du cas où le channel n'existe pas
+    {                                                                                               // dans ce cas on ne fait rien et on quitte la fonction
+        std::cout << "Le channel " << channelName << " n'existe pas.\n";
+        return;
+    }
+    if (fd == target)                                                                               // Gestion du cas où un operator veut se kick lui-même
+    {
+        std::cout << "Vous ne pouvez pas vous kick vous-même !\n";
+        return;
+    }
+
+    Channel& channel = it->second;                                                                  // On récupère le channel concerné
+
+    if(channel.isOperator(target))                                                                  // Cas où l'on veut exclure un opérator
+    {
+        std::cout << "Vous ne pouvez pas exclure un opérateur !\n";
+        return;
+    }
+    
+    if (channel.isClientInChannel(fd)) 
+    {
+        if (channel.isOperator(fd)) 
+        {
+            channel.removeClient(target);
+            std::cout << "Le client avec fd " << target << " a été expulsé du channel " << channelName << ".\n";
+        } 
+        else 
+        {
+            std::cout << "Vous devez être opérateur pour expulser un client.\n";
+        }
+    } 
+    else 
+    {
+        std::cout << "Le client avec fd " << fd << " n'est pas dans ce channel.\n";
+    }
+}
 
 
 void Server::run()

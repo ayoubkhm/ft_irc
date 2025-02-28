@@ -32,9 +32,12 @@ private:
     void handleNewConnection();
     void handleClientMessage(size_t index);
 
-    //Fonctions pour les channels
+    //Fonctions relatives aux channels
     void addChannel(const std::string &channelName);
     void removeChannel(const std::string &channelName);
+    void joinChannel(int fd, const std::string &channelName);
+    void kickClient(int fd, const std::string &channelName, int target);
+
 
     
 };
