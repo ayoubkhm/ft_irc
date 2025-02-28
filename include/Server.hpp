@@ -5,8 +5,10 @@
 #include <vector>
 #include <map>
 #include <poll.h>
+#include <unistd.h>
 #include "Client.hpp"
 #include "Channel.hpp"
+
 
 class Server
 {
