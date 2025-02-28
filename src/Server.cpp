@@ -125,8 +125,12 @@ void Server::handleClientMessage(size_t index)
 
 
 void Server::run()
-{
-    /*pour la gestion de clientS on doit utiliser std::map<int fd, Client* "class client">*/
+{ 
+    pollfd server_poll_fd;
+    server_poll_fd.fd = server_fd;
+    server_poll_fd.events = POLLIN;
+    pollfds.push_back(server_poll_fd);
+
     while (g_running)
     {
         int poll_count = poll(&pollfds[0], pollfds.size(), 1000); // Timeout de 1000 ms
@@ -138,17 +142,34 @@ void Server::run()
             break;
         }
         // Vérification de la socket serveur pour de nouvelles connexions
-        if (pollfds[0].revents & POLLIN)
+        std::vector<pollfd>::iterator it = pollfds.begin(); /*on pointe vers le 1er element de notre vector de pollfds*/
+        while (it != pollfds.end())
         {
-            handleNewConnection();
-        }
-        // Parcours des clients
-        for (size_t i = 1; i < pollfds.size(); ++i)
-        {
-            if (pollfds[i].revents & POLLIN)
+            if (it->revents & POLLIN)
             {
-                handleClientMessage(i);
+                if (it->fd = server_fd)
+                    handleNewConnection(); /*on devrait cree un newclient*/
+                else
+                    /*exit serveur*/
             }
+            else if (it->revents & POLLOUT)
+            {
+                /*gestion de pollout*/
+            }
+            else if (it->revents & POLLERR)
+            {
+                /*getion de pollerr erreur sur le FD*/
+            }
+            it++;
         }
+            // Parcours des clients
+            for (size_t i = 1; i < pollfds.size(); ++i)
+            {
+                if (pollfds[i].revents & POLLIN)
+                {
+                handleClientMessage(i);
+                }
+            }
+       
     }
 }
