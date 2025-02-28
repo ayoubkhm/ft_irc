@@ -126,6 +126,7 @@ void Server::handleClientMessage(size_t index)
 
 void Server::run()
 {
+    /*pour la gestion de clientS on doit utiliser std::map<int fd, Client* "class client">*/
     while (g_running)
     {
         int poll_count = poll(&pollfds[0], pollfds.size(), 1000); // Timeout de 1000 ms
