@@ -10,13 +10,13 @@
 
 class Channel {
 private:
-    std::string _name;               // Nom du channel
-    std::string _topic;              // Sujet du channel (TOPIC)
-    std::set<int> _clients;          // Clients dans le channel (représentés par leur fd)
-    std::set<int> _bannedClients;    // Clients bannis (représentés par leur fd)
-    std::set<int> _operators;        // Utilisateurs avec les droits d'admin
-    std::string _mode;               // Mode du channel (ex : "invite-only", "moderated", etc.)
-    size_t _maxClients;              // Nombre maximum de clients dans le channel
+    std::string _name;       // Nom du channel
+    std::string _topic;      // Sujet du channel (TOPIC)
+    std::set<int> _clients;  // Clients dans le channel (représentés par leur fd)
+    std::set<int> _bannedClients; // Clients bannis (représentés par leur fd)
+    std::set<int> _operators;     // Utilisateurs avec les droits d'admin
+    std::string _mode;       // Mode du channel (ex : "invite-only", "moderated", etc.)
+    size_t _maxClients;      // Nombre maximum de clients dans le channel
 
 public:
     // Constructeur
@@ -64,8 +64,8 @@ public:
     // Afficher les informations des clients dans le channel (juste leurs pseudo ici)
     void printClients() const;
 
-	// Retourner le nombre de clients connectés au channel
-    size_t Channel::getClientCount() const;
+    // Retourner le nombre de clients connectés au channel
+    size_t getClientCount() const;
 };
 
 #endif

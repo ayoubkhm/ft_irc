@@ -12,11 +12,11 @@
 
 extern volatile bool g_running;
 
-Server::Server(int port, const std::string &password) : server_fd(-1), port(port), password(password)
+Server::Server(int port, const std::string &password)
+    : server_fd(-1), port(port), password(password)
 {
     initServer();
 }
-
 
 Server::~Server()
 {
@@ -25,7 +25,6 @@ Server::~Server()
         close(pollfds[i].fd);
     }
 }
-
 
 // Initialisation de la socket serveur
 void Server::initServer()
@@ -54,7 +53,8 @@ void Server::initServer()
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(port);
-    if (bind(server_fd, reinterpret_cast<struct sockaddr*>(&server_addr), sizeof(server_addr)) < 0) {
+    if (bind(server_fd, reinterpret_cast<struct sockaddr*>(&server_addr), sizeof(server_addr)) < 0)
+    {
         std::cerr << "Erreur de bind: " << strerror(errno) << "\n";
         close(server_fd);
         exit(1);
@@ -65,7 +65,8 @@ void Server::initServer()
         close(server_fd);
         exit(1);
     }
-    std::cout << "Serveur initialisé sur le port " << port << " avec le mot de passe '" << password << "'\n";
+    std::cout << "Serveur initialisé sur le port " << port
+              << " avec le mot de passe '" << password << "'\n";
     
     // Ajout de la socket serveur dans le vecteur pollfds
     struct pollfd pfd;
@@ -101,8 +102,6 @@ void Server::handleNewConnection()
     write(client_fd, welcome, std::strlen(welcome));
 }
 
-
-
 // Gérer un message reçu depuis un client
 void Server::handleClientMessage(size_t index)
 {
@@ -121,14 +120,15 @@ void Server::handleClientMessage(size_t index)
     parseAndDispatch(pollfds[index].fd, std::string(buffer));
 }
 
-//Fonction qui créé un channel, échoue si le channel existe déjà
+// Fonction qui crée un channel, échoue si le channel existe déjà
 void Server::addChannel(const std::string& channelName) 
 {
-    auto it = _Channels.find(channelName);                                  // Vérifier si le channel existe déjà
-    if (it == _Channels.end())                                              // Si le channel n'existe pas, on le crée et on l'ajoute à la map de channels
+    std::map<std::string, Channel>::iterator it = _Channels.find(channelName);
+    if (it == _Channels.end())
     {
         Channel newChannel(channelName);
-        _Channels[channelName] = newChannel;
+        // Utilisation de insert pour éviter d'appeler le constructeur par défaut
+        _Channels.insert(std::make_pair(channelName, newChannel));
         std::cout << "Channel créé : " << channelName << "\n";
     } 
     else 
@@ -140,10 +140,10 @@ void Server::addChannel(const std::string& channelName)
 // Supprimer un channel existant
 void Server::removeChannel(const std::string& channelName) 
 {
-    auto it = _Channels.find(channelName);
+    std::map<std::string, Channel>::iterator it = _Channels.find(channelName);
     if (it != _Channels.end()) 
     {
-        _Channels.erase(it);                                                // Si le channel existe, on le supprime de la map de channels
+        _Channels.erase(it);
         std::cout << "Channel " << channelName << " supprimé.\n";
     } 
     else 
@@ -154,11 +154,11 @@ void Server::removeChannel(const std::string& channelName)
 
 void Server::joinChannel(int fd, const std::string& channelName) 
 {
-    auto it = _Channels.find(channelName);
+    std::map<std::string, Channel>::iterator it = _Channels.find(channelName);
     if (it == _Channels.end()) 
     {
-        std::cout << "Le channel " << channelName << " n'existe pas.\n";                            //Quand le channel n'existe pas on ne fait rien.
-        return;                                                                                     //(on peut le créer si vous voulez)
+        std::cout << "Le channel " << channelName << " n'existe pas.\n";
+        return;
     } 
     Channel& channel = it->second;
     channel.addClient(fd);
@@ -167,22 +167,22 @@ void Server::joinChannel(int fd, const std::string& channelName)
 
 void Server::kickClient(int fd, const std::string& channelName, int target) 
 {
-    auto it = _Channels.find(channelName);
+    std::map<std::string, Channel>::iterator it = _Channels.find(channelName);
 
-    if (it == _Channels.end())                                                                      // Gestion du cas où le channel n'existe pas
-    {                                                                                               // dans ce cas on ne fait rien et on quitte la fonction
+    if (it == _Channels.end())
+    {
         std::cout << "Le channel " << channelName << " n'existe pas.\n";
         return;
     }
-    if (fd == target)                                                                               // Gestion du cas où un operator veut se kick lui-même
+    if (fd == target)
     {
         std::cout << "Vous ne pouvez pas vous kick vous-même !\n";
         return;
     }
 
-    Channel& channel = it->second;                                                                  // On récupère le channel concerné
+    Channel& channel = it->second;
 
-    if(channel.isOperator(target))                                                                  // Cas où l'on veut exclure un opérator
+    if(channel.isOperator(target))
     {
         std::cout << "Vous ne pouvez pas exclure un opérateur !\n";
         return;
@@ -206,10 +206,9 @@ void Server::kickClient(int fd, const std::string& channelName, int target)
     }
 }
 
-
 void Server::run()
 { 
-    pollfd server_poll_fd;
+    struct pollfd server_poll_fd;
     server_poll_fd.fd = server_fd;
     server_poll_fd.events = POLLIN;
     pollfds.push_back(server_poll_fd);
@@ -225,34 +224,35 @@ void Server::run()
             break;
         }
         // Vérification de la socket serveur pour de nouvelles connexions
-        std::vector<pollfd>::iterator it = pollfds.begin(); /*on pointe vers le 1er element de notre vector de pollfds*/
+        std::vector<struct pollfd>::iterator it = pollfds.begin();
         while (it != pollfds.end())
         {
             if (it->revents & POLLIN)
             {
-                if (it->fd = server_fd)
-                    handleNewConnection(); /*on devrait cree un newclient*/
-                else
-                    /*exit serveur*/
+                if (it->fd == server_fd)
+                    handleNewConnection();
+                // Les autres cas sont commentés pour l'instant :
+                // else {
+                //     /* exit serveur ou autre gestion */
+                // }
             }
             else if (it->revents & POLLOUT)
             {
-                /*gestion de pollout*/
+                /* gestion de POLLOUT */
             }
             else if (it->revents & POLLERR)
             {
-                /*getion de pollerr erreur sur le FD*/
+                /* gestion de POLLERR */
             }
-            it++;
+            ++it;
         }
-            // Parcours des clients
-            for (size_t i = 1; i < pollfds.size(); ++i)
+        // Parcours des clients
+        for (size_t i = 1; i < pollfds.size(); ++i)
+        {
+            if (pollfds[i].revents & POLLIN)
             {
-                if (pollfds[i].revents & POLLIN)
-                {
                 handleClientMessage(i);
-                }
             }
-       
+        }
     }
 }

@@ -9,38 +9,29 @@
 #include "Client.hpp"
 #include "Channel.hpp"
 
-
-class Server
-{
+class Server {
 public:
     Server(int port, const std::string &password);
     ~Server();
-    /*forme canonique pour les class les gars
-    Server(Server const& copy);
-    Server &operator=(Server const& copy);*/
     void run();
     int const& getPort() const;
 private:
     int server_fd;
-    std::vector<struct pollfd>& pollfds;
+    std::vector<struct pollfd> pollfds;
     int port;
     std::string password;
     std::map<int, Client*> _ClientBook;
-    std::map<std::string, Channel>	_Channels;
+    std::map<std::string, Channel> _Channels;
 
     void initServer();
     void handleNewConnection();
     void handleClientMessage(size_t index);
 
-    //Fonctions relatives aux channels
+    // Fonctions relatives aux channels
     void addChannel(const std::string &channelName);
     void removeChannel(const std::string &channelName);
     void joinChannel(int fd, const std::string &channelName);
     void kickClient(int fd, const std::string &channelName, int target);
-
-
-    
 };
-/*addclient fonction();
-delclient();*/
+
 #endif
