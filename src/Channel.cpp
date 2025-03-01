@@ -1,99 +1,97 @@
 #include "Channel.hpp"
 
-// Constructeur de Channel
-Channel::Channel(const std::string& channelName, size_t maxClients, const std::string& mode): _name(channelName), _topic(""), _mode(mode), _maxClients(maxClients) 
+Channel::Channel(const std::string& channelName, size_t maxClients, const std::string& mode)
+    : _name(channelName), _topic(""), _mode(mode), _maxClients(maxClients)
 {
-
 }
 
 void Channel::addClient(int fd)
 {
     if (_clients.size() >= _maxClients) {
-        std::cerr << "Le channel "<< this->_name << " est plein !\n";
+        std::cerr << "Le channel " << _name << " est plein !" << std::endl;
         return;
     }
-	_clients.insert(fd);
+    _clients.insert(fd);
 }
 
-void Channel::removeClient(int fd) 
+void Channel::removeClient(int fd)
 {
-    auto it = _clients.find(fd);
+    std::set<int>::iterator it = _clients.find(fd);
     if (it != _clients.end()) {
         _clients.erase(it);
-        std::cout << "Client avec fd " << fd << " a été expulsé du channel.\n";
+        std::cout << "Client avec fd " << fd << " a été expulsé du channel." << std::endl;
     }
 }
 
-void Channel::banClient(int fd) 
+void Channel::banClient(int fd)
 {
-    _bannedClients.insert(fd);  // Ajout du fd à la liste des clients bannis
-    std::cout << "Client avec fd " << fd << " a été banni du channel.\n";
+    _bannedClients.insert(fd);
+    std::cout << "Client avec fd " << fd << " a été banni du channel." << std::endl;
 }
 
-void Channel::unbanClient(int fd) 
+void Channel::unbanClient(int fd)
 {
     _bannedClients.erase(fd);
-    std::cout << "Client avec fd " << fd << " a été débanni du channel.\n";
+    std::cout << "Client avec fd " << fd << " a été débanni du channel." << std::endl;
 }
 
-bool Channel::isClientInChannel(int fd) const 
+bool Channel::isClientInChannel(int fd) const
 {
-    return _clients.find(fd) != _clients.end();  // Vérifie si le fd est dans la set des clients
+    return _clients.find(fd) != _clients.end();
 }
 
-bool Channel::isBanned(int fd) const 
+bool Channel::isBanned(int fd) const
 {
-    return _bannedClients.find(fd) != _bannedClients.end();  // Vérifie si le fd est dans la set des bannis
+    return _bannedClients.find(fd) != _bannedClients.end();
 }
 
-bool Channel::isOperator(int fd) const 
+bool Channel::isOperator(int fd) const
 {
-    return _operators.find(fd) != _operators.end();  // Vérifie si le fd est dans la set des opérateurs
+    return _operators.find(fd) != _operators.end();
 }
 
-void Channel::addOperator(int fd) 
+void Channel::addOperator(int fd)
 {
-    _operators.insert(fd);  // Ajoute le fd à la set des opérateurs
-    std::cout << "Client avec fd " << fd << " est maintenant opérateur.\n";
+    _operators.insert(fd);
+    std::cout << "Client avec fd " << fd << " est maintenant opérateur." << std::endl;
 }
 
-void Channel::removeOperator(int fd) 
+void Channel::removeOperator(int fd)
 {
-    _operators.erase(fd);  // Retire le fd de la set des opérateurs
-    std::cout << "Client avec fd " << fd << " n'est plus opérateur.\n";
+    _operators.erase(fd);
+    std::cout << "Client avec fd " << fd << " n'est plus opérateur." << std::endl;
 }
 
-void Channel::setTopic(const std::string& newTopic) 
+void Channel::setTopic(const std::string& newTopic)
 {
     _topic = newTopic;
-    std::cout << "Le topic du channel " << _name << " a été mis à jour : " << _topic << "\n";
+    std::cout << "Le topic du channel " << _name << " a été mis à jour : " << _topic << std::endl;
 }
 
-const std::string& Channel::getTopic() const 
+const std::string& Channel::getTopic() const
 {
     return _topic;
 }
 
-const std::string& Channel::getMode() const 
+const std::string& Channel::getMode() const
 {
     return _mode;
 }
 
-size_t Channel::getMaxClients() const 
+size_t Channel::getMaxClients() const
 {
     return _maxClients;
 }
 
-void Channel::printClients() const 
+void Channel::printClients() const
 {
-    std::cout << "Clients dans le channel " << _name << " :\n";
-    for (const int& fd : _clients) 
-	{
-        std::cout << "- Client avec fd : " << fd << "\n";  // Affiche les fd des clients
+    std::cout << "Clients dans le channel " << _name << " :" << std::endl;
+    for (std::set<int>::const_iterator it = _clients.begin(); it != _clients.end(); ++it) {
+        std::cout << "- Client avec fd : " << *it << std::endl;
     }
 }
 
-size_t Channel::getClientCount() const 
+size_t Channel::getClientCount() const
 {
     return _clients.size();
 }
