@@ -7,7 +7,8 @@ Channel::Channel(const std::string& channelName, size_t maxClients, const std::s
 
 void Channel::addClient(int fd)
 {
-    if (_clients.size() >= _maxClients) {
+    if (_clients.size() >= _maxClients)
+    {
         std::cerr << "Le channel " << _name << " est plein !" << std::endl;
         return;
     }
@@ -17,7 +18,8 @@ void Channel::addClient(int fd)
 void Channel::removeClient(int fd)
 {
     std::set<int>::iterator it = _clients.find(fd);
-    if (it != _clients.end()) {
+    if (it != _clients.end())
+    {
         _clients.erase(it);
         std::cout << "Client avec fd " << fd << " a été expulsé du channel." << std::endl;
     }
@@ -86,12 +88,20 @@ size_t Channel::getMaxClients() const
 void Channel::printClients() const
 {
     std::cout << "Clients dans le channel " << _name << " :" << std::endl;
-    for (std::set<int>::const_iterator it = _clients.begin(); it != _clients.end(); ++it) {
+    std::set<int>::const_iterator it = _clients.begin();
+    while (it != _clients.end())
+    {
         std::cout << "- Client avec fd : " << *it << std::endl;
+        ++it;
     }
 }
 
 size_t Channel::getClientCount() const
 {
     return _clients.size();
+}
+
+const std::set<int>& Channel::getClientFds() const
+{
+    return _clients;
 }
