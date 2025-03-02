@@ -17,10 +17,12 @@ void signal_handler(int signal)
 
 int main(int argc, char **argv)
 {
-    if (argc != 3) {
+    if (argc != 3)
+    {
         std::cerr << "Usage: " << argv[0] << " <port> <password>\n";
         return 1;
     }
+    
     // Installation du handler pour SIGINT et SIGTERM
     struct sigaction sa;
     sa.sa_handler = signal_handler;
@@ -30,10 +32,12 @@ int main(int argc, char **argv)
     sigaction(SIGTERM, &sa, NULL);
     
     int port = std::atoi(argv[1]);
-    if (port <= 0 || port > 65535) {
+    if (port <= 0 || port > 65535)
+    {
         std::cerr << "Numéro de port invalide.\n";
         return 1;
     }
+    
     std::string password = argv[2];
     
     // Création et lancement du serveur
@@ -46,6 +50,7 @@ int main(int argc, char **argv)
     {
         std::cerr << e.what() << '\n';
     }
+    
     std::cout << "Serveur arrêté.\n";
     return 0;
 }
