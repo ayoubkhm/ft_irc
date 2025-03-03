@@ -112,11 +112,9 @@ void Server::handleNewConnection()
     pollfds.push_back(client_pfd);
     
     std::cout << "Nouvelle connexion, FD = " << client_fd << "\n";
-    _ClientBook[client_fd] = new Client(client_fd, password);
-    
-    const char *welcome = "Welcome to the IRC server!\r\n";
-    write(client_fd, welcome, std::strlen(welcome));
+    _ClientBook[client_fd] = new Client(client_fd, password);    
 }
+
 
 void Server::handleClientMessage(size_t index)
 {
