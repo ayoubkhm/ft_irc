@@ -78,7 +78,7 @@ void handleNick(Client* client, const std::vector<std::string>& params)
 // Handler pour la commande USER
 void handleUser(Client* client, const std::vector<std::string>& params)
 {
-    if (params.size() < 2)
+    if (params.size() < 1)
     {
         sendResponse(client, "461 USER :Not enough parameters");
         return;
@@ -144,6 +144,25 @@ void handlePrivmsg(Server* server, Client* client, const std::vector<std::string
         server->broadcastToChannel(target, "PRIVMSG " + target + " :" + message, client->getFd());
         sendResponse(client, "NOTICE PRIVMSG :Message delivered to " + target);
     }
+    else if (!target.empty() && target[0] != '#' && target != client->getNickname())
+    {
+        /*gestion des PRIVMSG*/
+        int targetClientFd = server->getFdByNickname(target);
+        if (targetClientFd == -1)
+        {
+            sendResponse(client, "401 " + target + " :No such nick/channel");
+            return;
+        }
+        Client* targetclient = server->getClientByFd(targetClientFd);
+        if (!targetclient)
+        {
+            sendResponse(client, "402 " + target + " :No such nick/channel");
+            return;
+        }
+        std::string resp = message + "\r\n";
+        write(targetclient->getFd(), resp.c_str(), resp.size());
+        sendResponse(targetclient, "NOTICE PRIVMSG :Message delivered to " + target);
+    }
     else
     {
         sendResponse(client, "401 " + target + " :No such nick/channel");
@@ -187,7 +206,11 @@ void handleKick(Server* server, Client* client, const std::vector<std::string>& 
         sendResponse(client, "441 " + params[1] + " " + params[0] + " :They aren't on that channel");
         return;
     }
-    
+    if (!channel->isOperator(client->getFd()))
+    {
+        sendResponse(client, "482 " + params[0] + " :You're not a channel operator");
+        return;
+    }
     // On peut procéder au kick
     std::cout << "DEBUG: Tentative de kick du client fd " << targetFd 
               << " du channel " << params[0] << std::endl;
@@ -221,7 +244,6 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
         sendResponse(client, "401 " + params[1] + " :No such nick/channel");
         return;
     }
-    
     // Vérifier que le client ne tente pas de s'inviter lui-même
     if (targetFd == client->getFd())
     {
