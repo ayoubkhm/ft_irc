@@ -32,7 +32,29 @@
 
 ## Exécution
 
-Après la compilation, lancez le serveur avec :
+Exemple pour lancer le serveur sur le port 6667 avec le mot de passe "mySecret" :
+```bash ./ircserv 6667 mySecret```
 
-```bash
-./ircserv
+Vous pouvez utiliser n'importe quel client IRC ou des outils comme telnet ou netcat pour vous connecter. Par exemple :
+
+```telnet localhost 6667```
+ou bien 
+```nc localhost 6667```
+
+Une fois connecté, vous devrez envoyer les commandes IRC (PASS, NICK, USER, etc.) pour vous enregistrer et interagir avec le serveur.
+
+
+## Points à améliorer
+
+### Implémentation de commandes supplémentaires
+Messages privés (PRIVMSG) : Permettre l'envoi de messages directement à un utilisateur.
+PART et QUIT : Gérer la sortie des utilisateurs d'un channel ou du serveur.
+(Note : Ce n'est pas demandé par le sujet, mais c'est une proposition de notre IA.)
+TOPIC et MODE : Compléter ces commandes pour permettre la gestion du topic et des modes du channel.
+
+### Robustesse
+Validation des entrées et gestion des erreurs : Bien que de nombreux tests aient été effectués, il serait intéressant de renforcer la robustesse du code.
+
+
+Honnêtement, de ce que je vois, on a fait à peu près 70% du taff.
+Bien à vous les reufs.
