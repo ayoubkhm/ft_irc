@@ -141,7 +141,9 @@ void handlePrivmsg(Server* server, Client* client, const std::vector<std::string
     }
     if (!target.empty() && target[0] == '#')
     {
-        server->broadcastToChannel(target, "PRIVMSG " + target + " :" + message, client->getFd());
+        size_t pos = target.find('#');
+        std::string result = target.substr(pos + 1);
+        server->broadcastToChannel(result, "PRIVMSG " + target + " :" + message, client->getFd());
         sendResponse(client, "NOTICE PRIVMSG :Message delivered to " + target);
     }
     else if (!target.empty() && target[0] != '#' && target != client->getNickname())
