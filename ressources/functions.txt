@@ -8,3 +8,6 @@ poll() : En gros c'est une fonction qui "surveille" des fd, plus précisement de
 --------------------------
 
 
+gerer le kick correctement loperateur peut kick mais pas linvite OK
+test invite pour la meme personne ok
+tester peronne invite et kick elle meme dans un channel

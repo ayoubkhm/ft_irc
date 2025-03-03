@@ -290,13 +290,11 @@ void Server::kickClient(int fd, const std::string& channelName, int target)
         std::cout << "Vous devez être opérateur pour expulser un client.\n";
         return;
     }
-    
     if (!channel.isClientInChannel(target))
     {
         std::cout << "Le client avec fd " << target << " n'est pas dans ce channel.\n";
         return;
     }
-    
     channel.removeClient(target);
     std::cout << "Le client avec fd " << target << " a été expulsé du channel " << channelName << ".\n";
 }
