@@ -27,22 +27,35 @@ static void sendResponse(Client* client, const std::string &response)
     }
 }
 
+// Handler pour la commande PING
+void handlePing(Client* client, const std::vector<std::string>& params)
+{
+    if (params.empty())
+    {
+        sendResponse(client, "409 :No origin specified");
+        return;
+    }
+    // Répondre avec PONG suivi du paramètre reçu
+    sendResponse(client, "PONG " + params[0]);
+}
+
+
 // Handler pour la commande PASS
 void handlePass(Client* client, const std::vector<std::string>& params)
 {
     if (params.empty())
     {
-        sendResponse(client, "Erreur: PASS nécessite un argument");
+        sendResponse(client, "461 PASS :Not enough parameters");
         return;
     }
     client->authenticate(params[0]);
     if (client->isAuthenticated())
     {
-        sendResponse(client, "Client authentifié via PASS");
+        sendResponse(client, "NOTICE :Mot de passe accepté");
     }
     else
     {
-        sendResponse(client, "Mot de passe incorrect");
+        sendResponse(client, "464 PASS :Mot de passe incorrect");
     }
 }
 
@@ -51,14 +64,14 @@ void handleNick(Client* client, const std::vector<std::string>& params)
 {
     if (params.empty())
     {
-        sendResponse(client, "Erreur: NICK nécessite un argument");
+        sendResponse(client, "461 NICK :Not enough parameters");
         return;
     }
     client->setNickname(const_cast<std::string&>(params[0]));
-    sendResponse(client, "Nickname défini: " + params[0]);
+    sendResponse(client, "NICK " + params[0] + " :Nickname set");
     if (client->isAuthenticated() && !client->getNickname().empty() && !client->getUsername().empty())
     {
-        sendResponse(client, "Client enregistré");
+        sendResponse(client, "001 " + client->getNickname() + " :Bienvenue sur ft_irc");
     }
 }
 
@@ -67,14 +80,14 @@ void handleUser(Client* client, const std::vector<std::string>& params)
 {
     if (params.size() < 2)
     {
-        sendResponse(client, "Erreur: USER nécessite au moins 2 arguments");
+        sendResponse(client, "461 USER :Not enough parameters");
         return;
     }
     client->setUsername(const_cast<std::string&>(params[0]));
-    sendResponse(client, "Username défini: " + params[0]);
+    sendResponse(client, "USER " + params[0] + " :Username set");
     if (client->isAuthenticated() && !client->getNickname().empty() && !client->getUsername().empty())
     {
-        sendResponse(client, "Client enregistré");
+        sendResponse(client, "001 " + client->getNickname() + " :Bienvenue sur ft_irc");
     }
 }
 
@@ -83,7 +96,7 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
 {
     if (params.empty())
     {
-        sendResponse(client, "Erreur: JOIN nécessite un nom de channel");
+        sendResponse(client, "461 JOIN :Not enough parameters");
         return;
     }
     
@@ -94,7 +107,7 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
     Channel* channel = server->getChannelByName(params[0]);
     if (channel && channel->isClientInChannel(client->getFd()))
     {
-        sendResponse(client, "JOIN " + params[0] + " réussi");
+        sendResponse(client, "JOIN " + params[0] + " :Join successful");
         
         // Notifier tous les membres du channel que ce client vient de rejoindre
         std::string joinMsg = ":" + client->getNickname() + " JOIN " + params[0];
@@ -102,17 +115,16 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
     }
     else
     {
-        sendResponse(client, "Erreur lors de l'inscription au channel " + params[0]);
+        sendResponse(client, "403 " + params[0] + " :No such channel");
     }
 }
-
 
 // Handler pour la commande PRIVMSG
 void handlePrivmsg(Server* server, Client* client, const std::vector<std::string>& params)
 {
     if (params.size() < 2)
     {
-        sendResponse(client, "Erreur: PRIVMSG nécessite une cible et un message");
+        sendResponse(client, "461 PRIVMSG :Not enough parameters");
         return;
     }
     std::string target = params[0];
@@ -130,11 +142,11 @@ void handlePrivmsg(Server* server, Client* client, const std::vector<std::string
     if (!target.empty() && target[0] == '#')
     {
         server->broadcastToChannel(target, "PRIVMSG " + target + " :" + message, client->getFd());
-        sendResponse(client, "Message envoyé au channel " + target);
+        sendResponse(client, "NOTICE PRIVMSG :Message delivered to " + target);
     }
     else
     {
-        sendResponse(client, "Erreur: PRIVMSG vers un utilisateur n'est pas implémenté");
+        sendResponse(client, "401 " + target + " :No such nick/channel");
     }
 }
 
@@ -143,19 +155,19 @@ void handleKick(Server* server, Client* client, const std::vector<std::string>& 
 {
     if (params.size() < 2)
     {
-        sendResponse(client, "Erreur: KICK nécessite un nom de channel et une cible");
+        sendResponse(client, "461 KICK :Not enough parameters");
         return;
     }
     int targetFd = server->getFdByNickname(params[1]);
     if (targetFd == -1)
     {
-        sendResponse(client, "Erreur: le pseudo " + params[1] + " n'a pas été trouvé.");
+        sendResponse(client, "401 " + params[1] + " :No such nick/channel");
         return;
     }
     // Vérifier que l'opérateur ne tente pas de se kicker lui-même
     if (targetFd == client->getFd())
     {
-        sendResponse(client, "Erreur: Vous ne pouvez pas vous kick vous-même !");
+        sendResponse(client, "502 :Cannot kick yourself");
         return;
     }
     
@@ -163,7 +175,7 @@ void handleKick(Server* server, Client* client, const std::vector<std::string>& 
     Channel* channel = server->getChannelByName(params[0]);
     if (!channel)
     {
-        sendResponse(client, "Erreur: Le channel " + params[0] + " n'existe pas.");
+        sendResponse(client, "403 " + params[0] + " :No such channel");
         return;
     }
     
@@ -172,7 +184,7 @@ void handleKick(Server* server, Client* client, const std::vector<std::string>& 
     {
         std::cout << "DEBUG: Le client avec fd " << targetFd 
                   << " n'est pas dans le channel " << params[0] << std::endl;
-        sendResponse(client, "Erreur: Le client " + params[1] + " n'est pas dans le channel " + params[0] + ".");
+        sendResponse(client, "441 " + params[1] + " " + params[0] + " :They aren't on that channel");
         return;
     }
     
@@ -182,14 +194,13 @@ void handleKick(Server* server, Client* client, const std::vector<std::string>& 
     server->kickClient(client->getFd(), params[0], targetFd);
     std::cout << "DEBUG: Client avec fd " << targetFd 
               << " a été expulsé du channel " << params[0] << "." << std::endl;
-    sendResponse(client, "KICK " + params[0] + " " + params[1] + " effectué");
-
+    sendResponse(client, "KICK " + params[0] + " " + params[1] + " :Kick successful");
     
     // Notifier le client kické
     Client* kickedClient = server->getClientByFd(targetFd);
     if (kickedClient)
     {
-        sendResponse(kickedClient, "Vous avez été kick du channel " + params[0]);
+        sendResponse(kickedClient, "NOTICE KICK :You have been kicked from " + params[0]);
         std::cout << "DEBUG: Notification envoyée au client fd " << targetFd << std::endl;
     }
 }
@@ -199,7 +210,7 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
 {
     if (params.size() < 2)
     {
-        sendResponse(client, "Erreur: INVITE nécessite un nom de channel et une cible");
+        sendResponse(client, "461 INVITE :Not enough parameters");
         return;
     }
     
@@ -207,14 +218,14 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
     int targetFd = server->getFdByNickname(params[1]);
     if (targetFd == -1)
     {
-        sendResponse(client, "Erreur: le pseudo " + params[1] + " n'a pas été trouvé.");
+        sendResponse(client, "401 " + params[1] + " :No such nick/channel");
         return;
     }
     
     // Vérifier que le client ne tente pas de s'inviter lui-même
     if (targetFd == client->getFd())
     {
-        sendResponse(client, "Erreur: Vous ne pouvez pas vous inviter vous-même !");
+        sendResponse(client, "502 :Cannot invite yourself");
         return;
     }
     
@@ -222,14 +233,14 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
     Channel* channel = server->getChannelByName(params[0]);
     if (!channel)
     {
-        sendResponse(client, "Erreur: Le channel " + params[0] + " n'existe pas.");
+        sendResponse(client, "403 " + params[0] + " :No such channel");
         return;
     }
     
     // Vérifier que le client à inviter n'est pas déjà dans le channel
     if (channel->isClientInChannel(targetFd))
     {
-        sendResponse(client, "Erreur: Le client " + params[1] + " est déjà dans le channel " + params[0] + ".");
+        sendResponse(client, "443 " + params[1] + " " + params[0] + " :is already on that channel");
         return;
     }
     
@@ -241,13 +252,12 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
     Client* invitedClient = server->getClientByFd(targetFd);
     if (!invitedClient)
     {
-        sendResponse(client, "Erreur: Impossible d'inviter " + params[1]);
+        sendResponse(client, "401 " + params[1] + " :No such nick/channel");
         return;
     }
     
     // Envoyer la notification d'invitation au client ciblé
-    sendResponse(invitedClient, "Vous avez été invité à rejoindre le channel " + params[0] +
-                                  " par " + client->getNickname());
+    sendResponse(invitedClient, "341 " + params[0] + " " + params[1] + " :You have been invited by " + client->getNickname());
     std::cout << "DEBUG: Invitation envoyée au client fd " << targetFd 
               << " pour le channel " << params[0] << std::endl;
     
@@ -257,8 +267,7 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
               << " a rejoint le channel " << params[0] << " suite à l'invitation." << std::endl;
     
     // Notifier l'émetteur que l'invitation a bien été envoyée et le client ajouté
-    sendResponse(client, "INVITE " + params[0] + " " + params[1] +
-                          " envoyé et " + params[1] + " ajouté au channel.");
+    sendResponse(client, "341 " + params[0] + " " + params[1] + " :Invite successful and user added");
 }
 
 // Handler pour la commande TOPIC (dummy)
@@ -266,7 +275,7 @@ void handleTopic(Server* server, Client* client, const std::vector<std::string>&
 {
     (void) server;
     (void) params;
-    sendResponse(client, "TOPIC non implémentée");
+    sendResponse(client, "332 :TOPIC non implémentée");
 }
 
 // Handler pour la commande MODE (dummy)
@@ -274,7 +283,7 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
 {
     (void) server;
     (void) params;
-    sendResponse(client, "MODE non implémentée");
+    sendResponse(client, "221 :MODE non implémentée");
 }
 
 void dispatchCommand(Server* server, Client* client, const std::vector<std::string>& tokens)
@@ -300,7 +309,7 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
     {
         if (cmd != "PASS" && cmd != "NICK" && cmd != "USER")
         {
-            sendResponse(client, "Erreur: Vous devez vous enregistrer (PASS, NICK, USER) avant d'utiliser d'autres commandes.");
+            sendResponse(client, "451 :You have not registered");
             return;
         }
     }
@@ -316,7 +325,15 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
     else if (cmd == "USER")
     {
         handleUser(client, params);
-    }
+        if (client->isAuthenticated() &&
+            !client->getNickname().empty() &&
+            !client->getUsername().empty() &&
+            !client->hasReceivedWelcome())
+        {
+            sendResponse(client, "001 " + client->getNickname() + " :Bienvenue sur ft_irc");
+            client->setWelcomeReceived(true);
+        }
+    }    
     else if (cmd == "JOIN")
     {
         handleJoin(server, client, params);
@@ -341,44 +358,92 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
     {
         handleMode(server, client, params);
     }
+    else if (cmd == "PING")
+    {
+        handlePing(client, params);
+    }
     else
     {
-        sendResponse(client, "[UNKNOWN] Commande inconnue: " + tokens[0]);
+        sendResponse(client, "421 " + tokens[0] + " :Unknown command");
     }
 }
 
+
+
 void parseAndDispatch(Server* server, Client* client, const std::string &message)
 {
-    std::vector<std::string> tokens;
-    size_t pos = 0;
-    while (pos < message.size())
+    // Découper le buffer en lignes, en se basant sur "\r\n"
+    size_t start = 0;
+    size_t end = message.find("\r\n");
+    while (end != std::string::npos)
     {
-        while (pos < message.size() && std::isspace(message[pos]))
+        std::string line = message.substr(start, end - start);
+        if (!line.empty())
         {
-            pos++;
+            std::vector<std::string> tokens;
+            size_t pos = 0;
+            while (pos < line.size())
+            {
+                // Passer les espaces
+                while (pos < line.size() && std::isspace(line[pos]))
+                    pos++;
+                if (pos >= line.size())
+                    break;
+                if (line[pos] == ':')
+                {
+                    tokens.push_back(line.substr(pos + 1));
+                    break;
+                }
+                size_t space = pos;
+                while (space < line.size() && !std::isspace(line[space]))
+                    space++;
+                tokens.push_back(line.substr(pos, space - pos));
+                pos = space;
+            }
+            if (tokens.empty())
+            {
+                sendResponse(client, "421 :Empty command received");
+            }
+            else
+            {
+                std::cout << "Commande détectée: " << tokens[0] << "\n";
+                dispatchCommand(server, client, tokens);
+            }
         }
-        if (pos >= message.size())
-        {
-            break;
-        }
-        if (message[pos] == ':')
-        {
-            tokens.push_back(message.substr(pos + 1));
-            break;
-        }
-        size_t end = pos;
-        while (end < message.size() && !std::isspace(message[end]))
-        {
-            end++;
-        }
-        tokens.push_back(message.substr(pos, end - pos));
-        pos = end;
+        start = end + 2; // Passer "\r\n"
+        end = message.find("\r\n", start);
     }
-    if (tokens.empty())
+    
+    // Si il reste une ligne sans CRLF à la fin
+    if (start < message.size())
     {
-        sendResponse(client, "Commande vide reçue.");
-        return;
+        std::string line = message.substr(start);
+        if (!line.empty())
+        {
+            std::vector<std::string> tokens;
+            size_t pos = 0;
+            while (pos < line.size())
+            {
+                while (pos < line.size() && std::isspace(line[pos]))
+                    pos++;
+                if (pos >= line.size())
+                    break;
+                if (line[pos] == ':')
+                {
+                    tokens.push_back(line.substr(pos + 1));
+                    break;
+                }
+                size_t space = pos;
+                while (space < line.size() && !std::isspace(line[space]))
+                    space++;
+                tokens.push_back(line.substr(pos, space - pos));
+                pos = space;
+            }
+            if (!tokens.empty())
+            {
+                std::cout << "Commande détectée: " << tokens[0] << "\n";
+                dispatchCommand(server, client, tokens);
+            }
+        }
     }
-    std::cout << "Commande détectée: " << tokens[0] << "\n";
-    dispatchCommand(server, client, tokens);
 }

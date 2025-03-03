@@ -47,6 +47,14 @@ ou bien
 Une fois connecté, vous devrez envoyer les commandes IRC (PASS, NICK, USER, etc.) pour vous enregistrer et interagir avec le serveur.
 
 
+## Compatibilité avec irssi
+
+Ce projet a été conçu et testé pour être utilisé avec irssi.
+
+Plusieurs choix de conception – notamment le format des réponses numériques (ex. 001 pour la bienvenue, 451 en cas d'erreur, etc.) et la gestion de PING/PONG – ont été adaptés pour que le comportement du serveur se rapproche le plus possible des standards du protocole IRC attendus par irssi.
+
+Ainsi, même si le serveur reste minimaliste, il permet une interopérabilité satisfaisante avec irssi et d'autres clients IRC.
+
 ## Points à améliorer
 
 ### Implémentation de commandes supplémentaires

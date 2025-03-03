@@ -13,6 +13,8 @@ private:
     std::string _Host;
     bool _authenticated;
     std::string _expectedPassword; // Mot de passe attendu, fourni par le serveur
+    bool _welcomeSent;
+
 
 public:
     // Constructeur avec mot de passe attendu
@@ -36,4 +38,6 @@ public:
     
     // Getter pour le mot de passe attendu
     std::string getExpectedPassword() const;
+    bool hasReceivedWelcome() const { return _welcomeSent; }
+    void setWelcomeReceived(bool val) { _welcomeSent = val; }
 };
