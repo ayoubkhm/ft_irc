@@ -14,7 +14,6 @@ private:
     std::string _name;
     std::string _topic;
     std::set<int> _clients;
-    std::set<int> _bannedClients;
     std::set<int> _operators;
     std::string _mode;
     size_t _maxClients;
@@ -23,10 +22,7 @@ public:
     Channel(const std::string& channelName, size_t maxClients = 50, const std::string& mode = "");
     void addClient(int fd);
     void removeClient(int fd);
-    void banClient(int fd);
-    void unbanClient(int fd);
     bool isClientInChannel(int fd) const;
-    bool isBanned(int fd) const;
     bool isOperator(int fd) const;
     void addOperator(int fd);
     void removeOperator(int fd);

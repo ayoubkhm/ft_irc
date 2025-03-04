@@ -25,26 +25,9 @@ void Channel::removeClient(int fd)
     }
 }
 
-void Channel::banClient(int fd)
-{
-    _bannedClients.insert(fd);
-    std::cout << "Client avec fd " << fd << " a été banni du channel." << std::endl;
-}
-
-void Channel::unbanClient(int fd)
-{
-    _bannedClients.erase(fd);
-    std::cout << "Client avec fd " << fd << " a été débanni du channel." << std::endl;
-}
-
 bool Channel::isClientInChannel(int fd) const
 {
     return _clients.find(fd) != _clients.end();
-}
-
-bool Channel::isBanned(int fd) const
-{
-    return _bannedClients.find(fd) != _bannedClients.end();
 }
 
 bool Channel::isOperator(int fd) const
