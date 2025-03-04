@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <cstdlib>
 
+//Fonction qui check si la string passée en paramètre est un nom de channel, si oui, le renvoie
 Channel* Server::getChannelByName(const std::string& channelName)
 {
     std::map<std::string, Channel>::iterator it = _Channels.find(channelName);
