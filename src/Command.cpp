@@ -295,12 +295,43 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
     sendResponse(client, "341 " + params[0] + " " + params[1] + " :Invite successful and user added");
 }
 
-// Handler pour la commande TOPIC (dummy)
+// Handler pour la commande TOPIC (presque pas dummy)
 void handleTopic(Server* server, Client* client, const std::vector<std::string>& params)
 {
-    (void) server;
-    (void) params;
-    sendResponse(client, "332 :TOPIC non implémentée");
+    // Vérifie qu'il y a au moins un paramètre (le nom du canal)
+    if (params.size() < 1) {
+        sendResponse(client, "Invalid arguments\nUsage for TOPIC: TOPIC <channel_name> (new topic)");
+        return;
+    }
+
+    // Récupérer le channel
+    Channel* channel = server->getChannelByName(params[0]);
+    if (!channel) {
+        sendResponse(client, "403 " + params[0] + " :No such channel");
+        return;
+    }
+
+    // Si on n'a pas de second paramètre (pas de nouveau sujet), afficher le sujet actuel
+    if (params.size() == 1) {
+        std::string current_topic = channel->getTopic();
+        
+        if (current_topic.empty()) {
+            sendResponse(client, "There's no topic for this channel yet.");
+            return;
+        } else {
+            sendResponse(client, "Current topic of the channel: " + current_topic);
+            return;
+        }
+    }
+
+   // Si on a un second paramètre (nouveau sujet), mettre à jour le sujet du canal
+   std::string new_topic = params[1];
+
+   // Mettre à jour le topic avec le nouveau contenu.
+   channel->setTopic(new_topic);
+   
+   // Notification pour confirmer que le changement a été effectué
+   sendResponse(client,"332 "+ params[0] +" :" + new_topic);  // Envoie une confirmation que le sujet a été changé.
 }
 
 // Handler pour la commande MODE (dummy)
