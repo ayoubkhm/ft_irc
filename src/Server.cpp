@@ -1,5 +1,6 @@
 #include "Server.hpp"
 #include "Command.hpp"
+#include "IRCUtils.hpp"
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
@@ -263,11 +264,11 @@ void Server::joinChannel(int fd, const std::string& channelName)
         if (itClient != _ClientBook.end())
         {
             Client* client = itClient->second;
-            std::string resp = "Vous êtes le créateur du channel " + channelName + " et vous êtes opérateur.\r\n";
-            write(client->getFd(), resp.c_str(), resp.size());
+            sendResponse(client, "NOTICE * :Vous êtes le créateur du channel " + channelName + " et vous êtes opérateur.");
         }
     }
 }
+
 
 void Server::kickClient(int fd, const std::string& channelName, int target)
 {
