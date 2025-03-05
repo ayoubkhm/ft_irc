@@ -366,3 +366,14 @@ Client* Server::getClientByFd(int fd)
         return NULL;
     }
 }
+
+bool Server::checkDuplicateClient(std::string const nickClient)
+{
+    for (std::map<int, Client*>::iterator it = _ClientBook.begin(); it != _ClientBook.end(); it++)
+    {
+        std::string Nickname = it->second->getNickname();
+        if (nickClient == Nickname)
+            return true;
+    }
+    return false;
+}

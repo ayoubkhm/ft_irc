@@ -24,6 +24,7 @@ public:
     int getFdByNickname(const std::string &nickname);
     Client* getClientByFd(int fd);
     Channel* getChannelByName(const std::string& channelName);
+    bool checkDuplicateClient(std::string const nickClient);
 
 private:
     int server_fd;

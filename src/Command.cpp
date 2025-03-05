@@ -1,5 +1,6 @@
 #include "Command.hpp"
 #include "IRCUtils.hpp" // Déclare sendResponse(...)
+#include "Server.hpp"
 #include <iostream>
 #include <vector>
 #include <cctype>
@@ -60,11 +61,17 @@ void handlePass(Client* client, const std::vector<std::string>& params)
 }
 
 // Handler pour la commande NICK
-void handleNick(Client* client, const std::vector<std::string>& params)
+void handleNick(Server* server ,Client* client, const std::vector<std::string>& params)
 {
     if (params.empty())
     {
         sendResponse(client, "461 NICK :Not enough parameters");
+        return;
+    }
+    std::string nickName = params[0];
+    if (server->checkDuplicateClient(nickName) == true)
+    {
+        sendResponse(client, "461 NICK : " + nickName + " Duplicate NICK");
         return;
     }
     client->setNickname(const_cast<std::string&>(params[0]));
@@ -408,8 +415,72 @@ void handleTopic(Server* server, Client* client, const std::vector<std::string>&
 // Handler pour la commande MODE (dummy)
 void handleMode(Server* server, Client* client, const std::vector<std::string>& params)
 {
-    (void) server;
-    (void) params;
+    if (params.size() != 2) 
+    {
+        sendResponse(client, "Invalid arguments\nUsage for MODE: MODE #<channel_name> <mode parameters>");
+        return;
+    }
+    std::string channelName = params[0];
+    std::string modeParametre = params[1];
+    if (channelName.empty() || channelName[0] != '#') {
+        sendResponse(client, ":ft_irc 403 " + channelName + " :Invalid channel name (must begin with '#')");
+        return;
+    }
+    if (modeParametre.empty() || modeParametre.size() != 2 || (modeParametre[0] != '-' && modeParametre[0] != '+')) {
+        sendResponse(client, ":ft_irc 403 " + modeParametre + " :Invalid parameters");
+        return;
+    }
+    Channel* channel = server->getChannelByName(channelName);
+    if (!channel) {
+        sendResponse(client, ":ft_irc 403 " + channelName + " :No such channel");
+        return;
+    }
+/*     switch (modeParametre[1]) {
+        case 'i': // Mode invite-only
+            if (modeParametre[0] == '+') {
+                sendResponse(client, "ok");
+            } else {
+                sendResponse(client, "ok2");
+            }
+            break;
+        case 't': // Mode topic restricted
+            if (modeParametre[0] == '+') {
+            // Restreindre la modification du topic aux opérateurs
+            // Exemple: channel->setTopicRestricted(true);
+            } else {
+            // Permettre à tous de modifier le topic
+            // Exemple: channel->setTopicRestricted(false);
+            }
+            break;
+        case 'k': // Mode clé (password)
+            if (modeParametre[0] == '+') {
+            // Pour activer le mode +k, il faut récupérer en supplément la clé
+            // Exemple: channel->setKey(clé);
+            } else {
+            // Désactiver la clé du channel
+            // Exemple: channel->setKey("");
+            }
+            break;
+        case 'o': // Donner ou retirer les privilèges d'opérateur
+            if (modeParametre[0] == '+') {
+            // Donner le statut d'opérateur à un utilisateur
+            // Exemple: channel->addOperator(targetNickname);
+            } else {
+            // Retirer le statut d'opérateur à un utilisateur
+            // Exemple: channel->removeOperator(targetNickname);
+            }
+            break;
+        case 'l': // Limite du nombre d'utilisateurs
+            if (modeParametre[0] == '+') {
+            // Activer une limite sur le nombre d'utilisateurs dans le channel
+            // Exemple: channel->setUserLimit(limitValue);
+            } else {
+            // Désactiver la limite
+            // Exemple: channel->setUserLimit(0);
+            }
+            break;
+        default:
+        } */
     sendResponse(client, "221 :MODE non implémentée");
 }
 
@@ -446,7 +517,7 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
     }
     else if (cmd == "NICK")
     {
-        handleNick(client, params);
+        handleNick(server, client, params);
     }
     else if (cmd == "USER")
     {
