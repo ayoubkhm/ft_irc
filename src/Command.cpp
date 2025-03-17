@@ -435,52 +435,7 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
         sendResponse(client, ":ft_irc 403 " + channelName + " :No such channel");
         return;
     }
-/*     switch (modeParametre[1]) {
-        case 'i': // Mode invite-only
-            if (modeParametre[0] == '+') {
-                sendResponse(client, "ok");
-            } else {
-                sendResponse(client, "ok2");
-            }
-            break;
-        case 't': // Mode topic restricted
-            if (modeParametre[0] == '+') {
-            // Restreindre la modification du topic aux opérateurs
-            // Exemple: channel->setTopicRestricted(true);
-            } else {
-            // Permettre à tous de modifier le topic
-            // Exemple: channel->setTopicRestricted(false);
-            }
-            break;
-        case 'k': // Mode clé (password)
-            if (modeParametre[0] == '+') {
-            // Pour activer le mode +k, il faut récupérer en supplément la clé
-            // Exemple: channel->setKey(clé);
-            } else {
-            // Désactiver la clé du channel
-            // Exemple: channel->setKey("");
-            }
-            break;
-        case 'o': // Donner ou retirer les privilèges d'opérateur
-            if (modeParametre[0] == '+') {
-            // Donner le statut d'opérateur à un utilisateur
-            // Exemple: channel->addOperator(targetNickname);
-            } else {
-            // Retirer le statut d'opérateur à un utilisateur
-            // Exemple: channel->removeOperator(targetNickname);
-            }
-            break;
-        case 'l': // Limite du nombre d'utilisateurs
-            if (modeParametre[0] == '+') {
-            // Activer une limite sur le nombre d'utilisateurs dans le channel
-            // Exemple: channel->setUserLimit(limitValue);
-            } else {
-            // Désactiver la limite
-            // Exemple: channel->setUserLimit(0);
-            }
-            break;
-        default:
-        } */
+    
     sendResponse(client, "221 :MODE non implémentée");
 }
 
