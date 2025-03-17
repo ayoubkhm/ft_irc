@@ -415,7 +415,7 @@ void handleTopic(Server* server, Client* client, const std::vector<std::string>&
 // Handler pour la commande MODE (dummy)
 void handleMode(Server* server, Client* client, const std::vector<std::string>& params)
 {
-    if (params.size() != 2) 
+    if (params.size() < 2) 
     {
         sendResponse(client, "Invalid arguments\nUsage for MODE: MODE #<channel_name> <mode parameters>");
         return;
@@ -426,7 +426,7 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
         sendResponse(client, ":ft_irc 403 " + channelName + " :Invalid channel name (must begin with '#')");
         return;
     }
-    if (modeParametre.empty() || modeParametre.size() != 2 || (modeParametre[0] != '-' && modeParametre[0] != '+')) {
+    if (modeParametre.empty()) {
         sendResponse(client, ":ft_irc 403 " + modeParametre + " :Invalid parameters");
         return;
     }
@@ -435,8 +435,82 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
         sendResponse(client, ":ft_irc 403 " + channelName + " :No such channel");
         return;
     }
-    
-    sendResponse(client, "221 :MODE non implémentée");
+    size_t paramsIdx = 2;
+    char sign = '=';
+    for (int i = 0; i < modeParametre.size(); i++)
+    {
+        if (modeParametre[i] == '-' || modeParametre[i] == '+') {
+            sign = modeParametre[i];
+            continue;
+        }
+            switch (modeParametre[i]) {
+                case 'i': // Mode invite-only
+                    if (sign == '+') {
+                        // Activer le mode invite-only pour le channel
+                        channel->setInviteOnly(true);
+                    } else {
+                        // Désactiver le mode invite-only
+                        channel->setInviteOnly(false);
+                    }
+                    break;
+                case 't': // Mode topic restricted
+                    if (sign == '+') {
+                        // Restreindre la modification du topic aux opérateurs
+                        channel->setTopicRestricted(true);
+                    } else {
+                        // Permettre à tous de modifier le topic
+                        channel->setTopicRestricted(false);
+                    }
+                    break;
+                case 'k': // Mode clé (password)
+                    if (sign == '+') {
+                        // Pour activer le mode +k, il faut récupérer en supplément la clé
+                        if (paramsIdx < params.size())
+                            channel->setKey(params[paramsIdx++]);
+                        else {
+                            sendResponse(client, ":ft_irc 461 " + channelName + " :Key parameter missing for +k");
+                            return;
+                        }
+                    } else {
+                        // Désactiver la clé du channel
+                        channel->setKey("");
+                    }
+                    break;
+                case 'o': // Donner ou retirer les privilèges d'opérateur
+                    if (paramsIdx < params.size()) {
+                        if (sign == '+')
+                        {
+                            int targetFd = server->getFdByNickname(params[paramsIdx++]);
+                            channel->addOperator(targetFd);
+                        }
+                        else
+                        {
+                            int aimFd = server->getFdByNickname(params[paramsIdx++]);
+                            channel->removeOperator(aimFd);
+                        }
+                    } else {
+                        sendResponse(client, ":ft_irc 461 " + channelName + " :Operator parameter missing for mode o");
+                        return;
+                    }
+                    break;
+                case 'l': // Limite du nombre d'utilisateurs
+                    if (sign == '+') {
+                        if (paramsIdx < params.size()) {
+                            int limit = std::atoi(params[paramsIdx++].c_str());
+                            channel->setUserLimit(limit);
+                        } else {
+                            sendResponse(client, ":ft_irc 461 " + channelName + " :User limit parameter missing for +l");
+                            return;
+                        }
+                    } else {
+                        channel->setUserLimit(0);
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+/*     sendResponse(client, "221 :MODE non implémentée"); */
 }
 
 void dispatchCommand(Server* server, Client* client, const std::vector<std::string>& tokens)
