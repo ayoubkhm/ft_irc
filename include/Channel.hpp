@@ -6,7 +6,9 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <algorithm>
 #include "Client.hpp"
+#include "IRCUtils.hpp"
 
 class Channel
 {
@@ -34,6 +36,7 @@ public:
     size_t getClientCount() const;
     // Nouvelle méthode pour récupérer les fds des clients
     const std::set<int>& getClientFds() const;
+    void parsingModeParam(std::string, Client*);
 };
 
 #endif
