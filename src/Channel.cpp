@@ -60,7 +60,17 @@ const std::string& Channel::getTopic() const
 
 const std::string& Channel::getMode() const
 {
-    return _mode;
+    static std::string mode;
+    mode = "";
+    if (_inviteOnly)
+        mode += "i";
+    if (_topicRestricted)
+        mode += "t";
+    if (!_key.empty())
+        mode += "k";
+    if (_userLimit > 0)
+        mode += "l";
+    return mode;
 }
 
 size_t Channel::getMaxClients() const
@@ -87,4 +97,38 @@ size_t Channel::getClientCount() const
 const std::set<int>& Channel::getClientFds() const
 {
     return _clients;
+}
+
+// Getters et setters pour les modes
+
+void Channel::setInviteOnly(bool inviteOnly) {
+    _inviteOnly = inviteOnly;
+}
+
+bool Channel::getInviteOnly() const {
+    return _inviteOnly;
+}
+
+void Channel::setTopicRestricted(bool topicRestricted) {
+    _topicRestricted = topicRestricted;
+}
+
+bool Channel::getTopicRestricted() const {
+    return _topicRestricted;
+}
+
+void Channel::setKey(const std::string& key) {
+    _key = key;
+}
+
+const std::string& Channel::getKey() const {
+    return _key;
+}
+
+void Channel::setUserLimit(int limit) {
+    _userLimit = limit;
+}
+
+int Channel::getUserLimit() const {
+    return _userLimit;
 }
