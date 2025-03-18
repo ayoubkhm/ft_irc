@@ -19,6 +19,11 @@ private:
     std::set<int> _operators;
     std::string _mode;
     size_t _maxClients;
+    /*************************************/
+    bool _inviteOnly;
+    bool _topicRestricted;
+    std::string _key;
+    int _userLimit;
 
 public:
     Channel(const std::string& channelName, size_t maxClients = 50, const std::string& mode = "");
@@ -36,6 +41,18 @@ public:
     size_t getClientCount() const;
     // Nouvelle méthode pour récupérer les fds des clients
     const std::set<int>& getClientFds() const;
+    // Getters et setters pour les modes
+    void setInviteOnly(bool inviteOnly);
+    bool getInviteOnly() const;
+    
+    void setTopicRestricted(bool topicRestricted);
+    bool getTopicRestricted() const;
+    
+    void setKey(const std::string& key);
+    const std::string& getKey() const;
+    
+    void setUserLimit(int limit);
+    int getUserLimit() const;
 };
 
 #endif

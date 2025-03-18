@@ -437,7 +437,7 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
     }
     size_t paramsIdx = 2;
     char sign = '=';
-    for (int i = 0; i < modeParametre.size(); i++)
+    for (size_t i = 0; i < modeParametre.size(); i++)
     {
         if (modeParametre[i] == '-' || modeParametre[i] == '+') {
             sign = modeParametre[i];
