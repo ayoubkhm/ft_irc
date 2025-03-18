@@ -110,6 +110,12 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
     Channel* channel = server->getChannelByName(channelName);
     if (channel)
     {
+        if (channel->isClientInChannel(client->getFd()))
+        {
+            sendResponse(client, ":ft_irc 473 " + channelName + " :Cannot join channel already in");
+            return;          
+        }
+
         if (channel->getInviteOnly() && !channel->isClientInvited(client->getFd()))
         {
             sendResponse(client, ":ft_irc 473 " + channelName + " :Cannot join channel (+i)");
@@ -302,6 +308,7 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
     }
     
     int targetFd = server->getFdByNickname(params[1]);
+    Channel* channel = server->getChannelByName(channelName);
     if (targetFd == -1)
     {
         sendResponse(client, "401 " + params[1] + " :No such nick/channel");
@@ -312,8 +319,6 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
         sendResponse(client, "502 :Cannot invite yourself");
         return;
     }
-    
-    Channel* channel = server->getChannelByName(channelName);
     if (!channel)
     {
         sendResponse(client, ":ft_irc 403 " + channelName + " :No such channel");
@@ -344,8 +349,8 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
               << " pour le channel " << channelName << std::endl;
     
     // Ajouter le client invité dans le channel
-    if (!channel->isClientInvited(client->getFd()))
-        channel->addInvitedClient(client->getFd());
+    if (!channel->isClientInvited(targetFd))
+        channel->addInvitedClient(targetFd);
     
     // Diffuser à tous les membres du channel le message JOIN du client invité
     Channel* ch = server->getChannelByName(channelName);
@@ -356,11 +361,11 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
         server->broadcastToChannel(channelName, joinMsg, -1);
     }
     std::cout << "DEBUG: Le client avec fd " << targetFd 
-              << " a rejoint le channel " << channelName << " suite à l'invitation." << std::endl;
+              << " a ete invite avec succes " << channelName << " suite à l'invitation." << std::endl;
     
     // Notifier l'émetteur avec un message numérique confirmant l'invitation
     sendResponse(client, ":ft_irc 341 " + channelName + " " + invitedClient->getNickname() +
-                    " :Invite successful and user added");
+                    " :Successfuly added to invite list");
 }
 
 
@@ -565,32 +570,36 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
                       
     if (!registered)
     {
-        if (cmd != "PASS" && cmd != "NICK" && cmd != "USER")
-        {
-            sendResponse(client, "451 :You have not registered");
-            return;
-        }
-    }
-    
-    if (cmd == "PASS")
-    {
-        handlePass(client, params);
-    }
-    else if (cmd == "NICK")
-    {
-        handleNick(server, client, params);
-    }
-    else if (cmd == "USER")
-    {
-        handleUser(client, params);
-        if (client->isAuthenticated() &&
-            !client->getNickname().empty() &&
-            !client->getUsername().empty() &&
-            !client->hasReceivedWelcome())
-        {
-            sendResponse(client, "001 " + client->getNickname() + " :Bienvenue sur ft_irc");
-            client->setWelcomeReceived(true);
-        }
+            if (cmd == "PASS")
+            {
+                handlePass(client, params);
+                return;
+            }
+            else if (cmd == "NICK")
+            {
+                handleNick(server, client, params);
+                return;
+            }
+            else if (cmd == "USER")
+            {
+                handleUser(client, params);
+                // Une fois que USER a été traitée, si le client est désormais enregistré et n'a pas encore reçu le message de bienvenue
+                if (client->isAuthenticated() &&
+                    !client->getNickname().empty() &&
+                    !client->getUsername().empty() &&
+                    !client->hasReceivedWelcome())
+                {
+                    sendResponse(client, "001 " + client->getNickname() + " :Bienvenue sur ft_irc");
+                    client->setWelcomeReceived(true);
+                }
+                return;
+            }
+            else
+            {
+                // Le client n'a pas envoyé PASS, NICK ou USER et n'est pas enregistré
+                sendResponse(client, "451 :You have not registered");
+                return;
+            }
     }
     else if (cmd == "JOIN")
     {
