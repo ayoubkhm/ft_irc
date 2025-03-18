@@ -17,6 +17,7 @@ private:
     std::string _topic;
     std::set<int> _clients;
     std::set<int> _operators;
+    std::set<int> _invitedFd;
     std::string _mode;
     size_t _maxClients;
     /*************************************/
@@ -28,8 +29,10 @@ private:
 public:
     Channel(const std::string& channelName, size_t maxClients = 50, const std::string& mode = "");
     void addClient(int fd);
+    void addInvitedClient(int fd);
     void removeClient(int fd);
     bool isClientInChannel(int fd) const;
+    bool isClientInvited(int fd) const;
     bool isOperator(int fd) const;
     void addOperator(int fd);
     void removeOperator(int fd);

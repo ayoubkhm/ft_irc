@@ -15,6 +15,11 @@ void Channel::addClient(int fd)
     _clients.insert(fd);
 }
 
+void Channel::addInvitedClient(int fd)
+{
+    _invitedFd.insert(fd);
+}
+
 void Channel::removeClient(int fd)
 {
     std::set<int>::iterator it = _clients.find(fd);
@@ -33,6 +38,11 @@ bool Channel::isClientInChannel(int fd) const
 bool Channel::isOperator(int fd) const
 {
     return _operators.find(fd) != _operators.end();
+}
+
+bool Channel::isClientInvited(int fd) const
+{
+    return _invitedFd.find(fd) != _invitedFd.end();
 }
 
 void Channel::addOperator(int fd)

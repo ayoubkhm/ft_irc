@@ -107,11 +107,42 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
         return;
     }
     
+    Channel* channel = server->getChannelByName(channelName);
+    if (channel)
+    {
+        if (channel->getInviteOnly() && !channel->isClientInvited(client->getFd()))
+        {
+            sendResponse(client, ":ft_irc 473 " + channelName + " :Cannot join channel (+i)");
+            return;
+        }
+
+        if (!channel->getKey().empty())
+        {
+            if (params.size() < 2)
+            {
+                sendResponse(client, ":ft_irc 475 " + channelName + " :Cannot join channel (+k) - key missing");
+                return;
+            }
+            std::string mdp = params[1];
+            if (channel->getKey() != mdp)
+            {
+                sendResponse(client, ":ft_irc 475 " + channelName + " :Cannot join channel (+k) - bad key");
+                return;
+            }
+        }
+    }
+    else
+    {
+        server->addChannel(channelName);
+        channel = server->getChannelByName(channelName);
+    }
+
     // Ajouter le client au channel
-    server->joinChannel(client->getFd(), channelName);
+    if (!channel->isClientInChannel(client->getFd()))
+        server->joinChannel(client->getFd(), channelName);
     
     // Récupérer le channel
-    Channel* channel = server->getChannelByName(channelName);
+    
     if (channel && channel->isClientInChannel(client->getFd()))
     {
         // Construire le message de JOIN avec préfixe complet
@@ -313,7 +344,8 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
               << " pour le channel " << channelName << std::endl;
     
     // Ajouter le client invité dans le channel
-    server->joinChannel(targetFd, channelName);
+    if (!channel->isClientInvited(client->getFd()))
+        channel->addInvitedClient(client->getFd());
     
     // Diffuser à tous les membres du channel le message JOIN du client invité
     Channel* ch = server->getChannelByName(channelName);
