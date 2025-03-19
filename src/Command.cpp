@@ -98,15 +98,12 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
         sendResponse(client, ":ft_irc 461 JOIN :Not enough parameters");
         return;
     }
-    
     std::string channelName = params[0];
-    // Vérifier que le nom du channel commence par '#'
     if (channelName.empty() || channelName[0] != '#')
     {
         sendResponse(client, ":ft_irc 403 " + channelName + " :Invalid channel name (must begin with '#')");
         return;
     }
-    
     Channel* channel = server->getChannelByName(channelName);
     if (channel)
     {
@@ -138,9 +135,6 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
         }
     }
     server->joinChannel(client->getFd(), channelName);
-    
-    // Récupérer le channel
-    
     if (channel && channel->isClientInChannel(client->getFd()))
     {
         // Construire le message de JOIN avec préfixe complet
@@ -545,7 +539,6 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
                     break;
             }
         }
-/*     sendResponse(client, "221 :MODE non implémentée"); */
 }
 
 void dispatchCommand(Server* server, Client* client, const std::vector<std::string>& tokens)

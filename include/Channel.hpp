@@ -18,7 +18,6 @@ private:
     std::set<int> _clients;
     std::set<int> _operators;
     std::set<int> _invitedFd;
-    std::string _mode;
     size_t _maxClients;
     /*************************************/
     bool _inviteOnly;
@@ -27,7 +26,7 @@ private:
     int _userLimit;
 
 public:
-    Channel(const std::string& channelName, size_t maxClients = 50, const std::string& mode = "");
+    Channel(const std::string& channelName, size_t maxClients = 50);
     void addClient(int fd);
     void addInvitedClient(int fd);
     void removeClient(int fd);
@@ -38,7 +37,6 @@ public:
     void removeOperator(int fd);
     void setTopic(const std::string& newTopic);
     const std::string& getTopic() const;
-    const std::string& getMode() const;
     size_t getMaxClients() const;
     void printClients() const;
     size_t getClientCount() const;
