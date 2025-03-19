@@ -137,15 +137,7 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
             }
         }
     }
-    else
-    {
-        server->addChannel(channelName);
-        channel = server->getChannelByName(channelName);
-    }
-
-    // Ajouter le client au channel
-    if (!channel->isClientInChannel(client->getFd()))
-        server->joinChannel(client->getFd(), channelName);
+    server->joinChannel(client->getFd(), channelName);
     
     // Récupérer le channel
     
@@ -468,9 +460,15 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
         return;
     }
     Channel* channel = server->getChannelByName(channelName);
+    int fdclient = server->getFdByNickname(client->getNickname());
     if (!channel) {
         sendResponse(client, ":ft_irc 403 " + channelName + " :No such channel");
         return;
+    }
+    if (!channel->isOperator(fdclient))
+    {
+        sendResponse(client, ":ft_irc 403 " + channelName + " :Client: " + client->getNickname() + " not allow to MODE");
+        return; 
     }
     size_t paramsIdx = 2;
     char sign = '=';

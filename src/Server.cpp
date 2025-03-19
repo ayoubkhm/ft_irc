@@ -253,8 +253,9 @@ void Server::joinChannel(int fd, const std::string& channelName)
     }
     
     Channel& channel = it->second;
-    channel.addClient(fd);
-    std::cout << "Le client avec fd " << fd << " a rejoint le channel " << channelName << ".\n";
+    if (!channel.isClientInChannel(fd)) {
+        channel.addClient(fd);
+        std::cout << "Le client avec fd " << fd << " a rejoint le channel " << channelName << ".\n";}
     
     // Si le channel vient d'être créé, confère les droits d'opérateur au créateur
     if (newlyCreated)
