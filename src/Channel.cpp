@@ -1,7 +1,7 @@
 #include "Channel.hpp"
 
-Channel::Channel(const std::string& channelName, size_t maxClients, const std::string& mode)
-    : _name(channelName), _topic(""), _mode(mode), _maxClients(maxClients)
+Channel::Channel(const std::string& channelName, size_t maxClients)
+    : _name(channelName), _topic(""), _maxClients(maxClients)
 {
 }
 
@@ -66,21 +66,6 @@ void Channel::setTopic(const std::string& newTopic)
 const std::string& Channel::getTopic() const
 {
     return _topic;
-}
-
-const std::string& Channel::getMode() const
-{
-    static std::string mode;
-    mode = "";
-    if (_inviteOnly)
-        mode += "i";
-    if (_topicRestricted)
-        mode += "t";
-    if (!_key.empty())
-        mode += "k";
-    if (_userLimit > 0)
-        mode += "l";
-    return mode;
 }
 
 size_t Channel::getMaxClients() const
