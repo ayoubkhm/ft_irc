@@ -1,5 +1,4 @@
-#ifndef CHANNEL_HPP
-#define CHANNEL_HPP
+#pragma once
 
 #include <set>
 #include <string>
@@ -55,5 +54,3 @@ public:
     void setUserLimit(int limit);
     int getUserLimit() const;
 };
-
-#endif
