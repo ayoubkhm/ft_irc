@@ -113,7 +113,8 @@ void Server::handleNewConnection()
     pollfds.push_back(client_pfd);
     
     std::cout << "Nouvelle connexion, FD = " << client_fd << "\n";
-    _ClientBook[client_fd] = new Client(client_fd, password);    
+    _ClientBook[client_fd] = new Client(client_fd, password);
+    displayRegistrationInstructions(_ClientBook[client_fd]);
 }
 
 
