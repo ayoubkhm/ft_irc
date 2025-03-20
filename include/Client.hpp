@@ -4,6 +4,13 @@
 #include <sys/socket.h>
 #include <string>
 
+enum ClientState {
+    WAITING_FOR_PASS,
+    WAITING_FOR_NICK,
+    WAITING_FOR_USER,
+    REGISTERED
+};
+
 class Client {
 private:
     int _fd;
@@ -14,6 +21,7 @@ private:
     bool _authenticated;
     std::string _expectedPassword; // Mot de passe attendu, fourni par le serveur
     bool _welcomeSent;
+    ClientState state;
 
 
 public:
@@ -40,4 +48,6 @@ public:
     std::string getExpectedPassword() const;
     bool hasReceivedWelcome() const { return _welcomeSent; }
     void setWelcomeReceived(bool val) { _welcomeSent = val; }
+    ClientState getState() const { return state; }
+    void setState(ClientState newState) { state = newState; }
 };
