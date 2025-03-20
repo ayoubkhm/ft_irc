@@ -1,5 +1,4 @@
-#ifndef COMMAND_HPP
-#define COMMAND_HPP
+#pragma once
 
 #include <string>
 #include <vector>
@@ -9,4 +8,3 @@
 // Parse le message reçu et dispatch la commande correspondante
 void parseAndDispatch(Server* server, Client* client, const std::string &message);
 
-#endif
