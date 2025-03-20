@@ -472,73 +472,73 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
             sign = modeParametre[i];
             continue;
         }
-            switch (modeParametre[i]) {
-                case 'i': // Mode invite-only
-                    if (sign == '+') {
-                        // Activer le mode invite-only pour le channel
-                        channel->setInviteOnly(true);
-                    } else {
-                        // Désactiver le mode invite-only
-                        channel->setInviteOnly(false);
-                    }
-                    break;
-                case 't': // Mode topic restricted
-                    if (sign == '+') {
-                        // Restreindre la modification du topic aux opérateurs
-                        channel->setTopicRestricted(true);
-                    } else {
-                        // Permettre à tous de modifier le topic
-                        channel->setTopicRestricted(false);
-                    }
-                    break;
-                case 'k': // Mode clé (password)
-                    if (sign == '+') {
-                        // Pour activer le mode +k, il faut récupérer en supplément la clé
-                        if (paramsIdx < params.size())
-                            channel->setKey(params[paramsIdx++]);
-                        else {
-                            sendResponse(client, ":ft_irc 461 " + channelName + " :Key parameter missing for +k");
-                            return;
-                        }
-                    } else {
-                        // Désactiver la clé du channel
-                        channel->setKey("");
-                    }
-                    break;
-                case 'o': // Donner ou retirer les privilèges d'opérateur
-                    if (paramsIdx < params.size()) {
-                        if (sign == '+')
-                        {
-                            int targetFd = server->getFdByNickname(params[paramsIdx++]);
-                            channel->addOperator(targetFd);
-                        }
-                        else
-                        {
-                            int aimFd = server->getFdByNickname(params[paramsIdx++]);
-                            channel->removeOperator(aimFd);
-                        }
-                    } else {
-                        sendResponse(client, ":ft_irc 461 " + channelName + " :Operator parameter missing for mode o");
+        switch (modeParametre[i]) {
+            case 'i': // Mode invite-only
+                if (sign == '+') {
+                    // Activer le mode invite-only pour le channel
+                    channel->setInviteOnly(true);
+                } else {
+                    // Désactiver le mode invite-only
+                    channel->setInviteOnly(false);
+                }
+                break;
+            case 't': // Mode topic restricted
+                if (sign == '+') {
+                    // Restreindre la modification du topic aux opérateurs
+                    channel->setTopicRestricted(true);
+                } else {
+                    // Permettre à tous de modifier le topic
+                    channel->setTopicRestricted(false);
+                }
+                break;
+            case 'k': // Mode clé (password)
+                if (sign == '+') {
+                    // Pour activer le mode +k, il faut récupérer en supplément la clé
+                    if (paramsIdx < params.size())
+                        channel->setKey(params[paramsIdx++]);
+                    else {
+                        sendResponse(client, ":ft_irc 461 " + channelName + " :Key parameter missing for +k");
                         return;
                     }
-                    break;
-                case 'l': // Limite du nombre d'utilisateurs
-                    if (sign == '+') {
-                        if (paramsIdx < params.size()) {
-                            int limit = std::atoi(params[paramsIdx++].c_str());
-                            channel->setUserLimit(limit);
-                        } else {
-                            sendResponse(client, ":ft_irc 461 " + channelName + " :User limit parameter missing for +l");
-                            return;
-                        }
-                    } else {
-                        channel->setUserLimit(0);
+                } else {
+                    // Désactiver la clé du channel
+                    channel->setKey("");
+                }
+                break;
+            case 'o': // Donner ou retirer les privilèges d'opérateur
+                if (paramsIdx < params.size()) {
+                    if (sign == '+')
+                    {
+                        int targetFd = server->getFdByNickname(params[paramsIdx++]);
+                        channel->addOperator(targetFd);
                     }
-                    break;
-                default:
-                    break;
-            }
+                    else
+                    {
+                        int aimFd = server->getFdByNickname(params[paramsIdx++]);
+                        channel->removeOperator(aimFd);
+                    }
+                } else {
+                    sendResponse(client, ":ft_irc 461 " + channelName + " :Operator parameter missing for mode o");
+                    return;
+                }
+                break;
+            case 'l': // Limite du nombre d'utilisateurs
+                if (sign == '+') {
+                    if (paramsIdx < params.size()) {
+                        int limit = std::atoi(params[paramsIdx++].c_str());
+                        channel->setUserLimit(limit);
+                    } else {
+                        sendResponse(client, ":ft_irc 461 " + channelName + " :User limit parameter missing for +l");
+                        return;
+                    }
+                } else {
+                    channel->setUserLimit(0);
+                }
+                break;
+            default:
+                break;
         }
+    }
 }
 
 void dispatchCommand(Server* server, Client* client, const std::vector<std::string>& tokens)
@@ -561,36 +561,36 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
                       
     if (!registered)
     {
-            if (cmd == "PASS")
+        if (cmd == "PASS")
+        {
+            handlePass(client, params);
+            return;
+        }
+        else if (cmd == "NICK")
+        {
+            handleNick(server, client, params);
+            return;
+        }
+        else if (cmd == "USER")
+        {
+            handleUser(client, params);
+            // Une fois que USER a été traitée, si le client est désormais enregistré et n'a pas encore reçu le message de bienvenue
+            if (client->isAuthenticated() &&
+                !client->getNickname().empty() &&
+                !client->getUsername().empty() &&
+                !client->hasReceivedWelcome())
             {
-                handlePass(client, params);
-                return;
+                sendResponse(client, "001 " + client->getNickname() + " :Bienvenue sur ft_irc");
+                client->setWelcomeReceived(true);
             }
-            else if (cmd == "NICK")
-            {
-                handleNick(server, client, params);
-                return;
-            }
-            else if (cmd == "USER")
-            {
-                handleUser(client, params);
-                // Une fois que USER a été traitée, si le client est désormais enregistré et n'a pas encore reçu le message de bienvenue
-                if (client->isAuthenticated() &&
-                    !client->getNickname().empty() &&
-                    !client->getUsername().empty() &&
-                    !client->hasReceivedWelcome())
-                {
-                    sendResponse(client, "001 " + client->getNickname() + " :Bienvenue sur ft_irc");
-                    client->setWelcomeReceived(true);
-                }
-                return;
-            }
-            else
-            {
-                // Le client n'a pas envoyé PASS, NICK ou USER et n'est pas enregistré
-                sendResponse(client, "451 :You have not registered");
-                return;
-            }
+            return;
+        }
+        else
+        {
+            // Le client n'a pas envoyé PASS, NICK ou USER et n'est pas enregistré
+            sendResponse(client, "451 :You have not registered");
+            return;
+        }
     }
     else if (cmd == "JOIN")
     {
