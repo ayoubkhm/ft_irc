@@ -3,8 +3,8 @@
 
 // Constructeur principal avec mot de passe attendu
 Client::Client(int fd, const std::string &expectedPassword)
-    : _fd(fd), _port(0), _Nickname(""), _Username(""), _Host(""), _authenticated(false),
-      _expectedPassword(expectedPassword)
+    : _fd(fd), _port(0), _Nickname(""),_Username(""), _Host(""), _authenticated(false),
+      _expectedPassword(expectedPassword), _welcomeSent(false), state(WAITING_FOR_PASS)
 {
 }
 

@@ -316,6 +316,11 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
         sendResponse(client, "443 " + params[1] + " " + channelName + " :is already on that channel");
         return;
     }
+    if (channel->isClientInvited(targetFd))
+    {
+        sendResponse(client, "443 " + params[1] + " " + channelName + " :is already invited");
+        return;
+    }
     
     std::cout << "DEBUG: Tentative d'inviter le client fd " << targetFd 
               << " au channel " << channelName << std::endl;
@@ -555,78 +560,72 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
     }
     std::vector<std::string> params(tokens.begin() + 1, tokens.end());
     
-    bool registered = client->isAuthenticated() &&
+/*     bool registered = client->isAuthenticated() &&
                       (!client->getNickname().empty()) &&
-                      (!client->getUsername().empty());
+                      (!client->getUsername().empty()); */
                       
-    if (!registered)
+    switch (client->getState())
     {
-        if (cmd == "PASS")
-        {
-            handlePass(client, params);
-            return;
-        }
-        else if (cmd == "NICK")
-        {
-            handleNick(server, client, params);
-            return;
-        }
-        else if (cmd == "USER")
-        {
-            handleUser(client, params);
-            // Une fois que USER a été traitée, si le client est désormais enregistré et n'a pas encore reçu le message de bienvenue
-            if (client->isAuthenticated() &&
-                !client->getNickname().empty() &&
-                !client->getUsername().empty() &&
-                !client->hasReceivedWelcome())
+        case WAITING_FOR_PASS:
+            if (cmd == "PASS")
             {
-                sendResponse(client, "001 " + client->getNickname() + " :Bienvenue sur ft_irc");
-                client->setWelcomeReceived(true);
+                handlePass(client, params);
+                // Supposons que handlePass() met à jour l'état si le mot de passe est correct
+                client->setState(WAITING_FOR_NICK);
+            }
+            else
+            {
+                sendResponse(client, "451 :You have not registered - PASS required first");
             }
             return;
-        }
-        else
-        {
-            // Le client n'a pas envoyé PASS, NICK ou USER et n'est pas enregistré
-            sendResponse(client, "451 :You have not registered");
+            
+        case WAITING_FOR_NICK:
+            if (cmd == "NICK")
+            {
+                handleNick(server, client, params);
+                client->setState(WAITING_FOR_USER);
+            }
+            else
+            {
+                sendResponse(client, "451 :You have not registered - NICK required next");
+            }
             return;
-        }
-    }
-    else if (cmd == "JOIN")
-    {
-        handleJoin(server, client, params);
-    }
-    else if (cmd == "PRIVMSG")
-    {
-        handlePrivmsg(server, client, params);
-    }
-    else if (cmd == "KICK")
-    {
-        handleKick(server, client, params);
-    }
-    else if (cmd == "INVITE")
-    {
-        handleInvite(server, client, params);
-    }
-    else if (cmd == "PART")
-    {
-        handlePart(server, client, params);
-    }
-    else if (cmd == "TOPIC")
-    {
-        handleTopic(server, client, params);
-    }
-    else if (cmd == "MODE")
-    {
-        handleMode(server, client, params);
-    }
-    else if (cmd == "PING")
-    {
-        handlePing(client, params);
-    }
-    else
-    {
-        sendResponse(client, "421 " + tokens[0] + " :Unknown command");
+            
+        case WAITING_FOR_USER:
+            if (cmd == "USER")
+            {
+                handleUser(client, params);
+                // Une fois que USER a été traitée, on passe à l'état REGISTERED
+                client->setState(REGISTERED);
+                sendResponse(client, "001 " + client->getNickname() + " :Bienvenue sur ft_irc");
+            }
+            else
+            {
+                sendResponse(client, "451 :You have not registered - USER required next");
+            }
+            return;
+            
+        case REGISTERED:
+            // Le client est enregistré, traiter les autres commandes
+            if (cmd == "JOIN")
+                handleJoin(server, client, params);
+            else if (cmd == "PRIVMSG")
+                handlePrivmsg(server, client, params);
+            else if (cmd == "KICK")
+                handleKick(server, client, params);
+            else if (cmd == "INVITE")
+                handleInvite(server, client, params);
+            else if (cmd == "PART")
+                handlePart(server, client, params);
+            else if (cmd == "TOPIC")
+                handleTopic(server, client, params);
+            else if (cmd == "MODE")
+                handleMode(server, client, params);
+            else if (cmd == "PING")
+                handlePing(client, params);
+            else
+                sendResponse(client, "421 " + tokens[0] + " :Unknown command");
+            return;
     }
 }
 
