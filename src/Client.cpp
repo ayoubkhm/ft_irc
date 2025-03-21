@@ -22,7 +22,9 @@ Client::Client(Client const & copy)
       _Username(copy._Username),
       _Host(copy._Host),
       _authenticated(copy._authenticated),
-      _expectedPassword(copy._expectedPassword)
+      _expectedPassword(copy._expectedPassword),  
+      _welcomeSent(copy._welcomeSent),
+      state(copy.state)
 {
 }
 
@@ -38,6 +40,8 @@ Client & Client::operator=(Client const & other)
         _Host = other._Host;
         _authenticated = other._authenticated;
         _expectedPassword = other._expectedPassword;
+        _welcomeSent = other._welcomeSent;
+        state = other.state;
     }
     return *this;
 }

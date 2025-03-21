@@ -5,6 +5,40 @@ Channel::Channel(const std::string& channelName, size_t maxClients)
 {
 }
 
+Channel::~Channel() {}
+
+Channel::Channel(const Channel& other)
+: _name(other._name),
+  _topic(other._topic),
+  _clients(other._clients),
+  _operators(other._operators),
+  _invitedFd(other._invitedFd),
+  _maxClients(other._maxClients),
+  _inviteOnly(other._inviteOnly),
+  _topicRestricted(other._topicRestricted),
+  _key(other._key),
+  _userLimit(other._userLimit)
+{
+}
+
+// Surcharge de l'opérateur d'affectation
+Channel& Channel::operator=(const Channel& other) {
+if (this != &other) {
+    _name = other._name;
+    _topic = other._topic;
+    _clients = other._clients;
+    _operators = other._operators;
+    _invitedFd = other._invitedFd;
+    _maxClients = other._maxClients;
+    _inviteOnly = other._inviteOnly;
+    _topicRestricted = other._topicRestricted;
+    _key = other._key;
+    _userLimit = other._userLimit;
+}
+return *this;
+}
+
+
 void Channel::addClient(int fd)
 {
     if (_clients.size() >= _maxClients)
