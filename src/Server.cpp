@@ -36,6 +36,29 @@ Server::~Server()
     }
 }
 
+Server::Server(const Server &other)
+: server_fd(other.server_fd),
+  pollfds(other.pollfds),
+  port(other.port),
+  password(other.password),
+  _ClientBook(other._ClientBook),  // Attention : copie superficielle des pointeurs
+  _Channels(other._Channels)         // Nécessite que Channel soit copyable
+{
+}
+
+// Opérateur d'affectation (shallow copy)
+Server& Server::operator=(const Server &other) {
+if (this != &other) {
+    server_fd = other.server_fd;
+    pollfds = other.pollfds;
+    port = other.port;
+    password = other.password;
+    _ClientBook = other._ClientBook;  // shallow copy
+    _Channels = other._Channels;
+}
+return *this;
+}
+
 void Server::initServer()
 {
     server_fd = socket(AF_INET, SOCK_STREAM, 0);

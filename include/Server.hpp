@@ -13,6 +13,8 @@ class Server
 public:
     Server(int port, const std::string &password);
     ~Server();
+    Server(Server const& copy);
+    Server &operator=(Server const& copy);    
     void run();
     int const& getPort() const;
     void addChannel(const std::string &channelName);

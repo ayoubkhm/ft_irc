@@ -26,6 +26,9 @@ private:
 
 public:
     Channel(const std::string& channelName, size_t maxClients = 50);
+    ~Channel();
+    Channel(Channel const& copy);
+    Channel &operator=(Channel const& copy);
     void addClient(int fd);
     void addInvitedClient(int fd);
     void removeClient(int fd);
