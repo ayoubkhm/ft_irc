@@ -93,7 +93,6 @@ const std::set<int>& Channel::getClientFds() const
 {
     return _clients;
 }
-
 // Getters et setters pour les modes
 
 void Channel::setInviteOnly(bool inviteOnly) {

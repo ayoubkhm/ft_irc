@@ -135,6 +135,7 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
         }
     }
     server->joinChannel(client->getFd(), channelName);
+    channel = server->getChannelByName(channelName);
     if (channel && channel->isClientInChannel(client->getFd()))
     {
         // Construire le message de JOIN avec préfixe complet
@@ -144,9 +145,7 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
         sendResponse(client, ":ft_irc 001 " + client->getNickname() + " :Joined channel " + channelName);
     }
     else
-    {
         sendResponse(client, ":ft_irc 403 " + channelName + " :No such channel");
-    }
 }
 
 // Handler pour la commande PRIVMSG
@@ -428,7 +427,12 @@ void handleTopic(Server* server, Client* client, const std::vector<std::string>&
     }
 
     // Mettre à jour le topic avec le nouveau contenu
-    std::string new_topic = params[1];
+    std::string new_topic;
+    for (size_t i = 1; i < params.size(); i++) {
+        if (i > 1)
+            new_topic += " ";
+        new_topic += params[i];
+    }
     channel->setTopic(new_topic);
 
     // Construire le message TOPIC au format IRC
@@ -520,7 +524,11 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
                     else
                     {
                         int aimFd = server->getFdByNickname(params[paramsIdx++]);
-                        channel->removeOperator(aimFd);
+                        if (!channel->isOperator(aimFd))
+                            channel->removeOperator(aimFd);
+                        else {
+                            sendResponse(client, ":ft_irc 461 " + channelName + " :Operator cant be remove");
+                            return;}
                     }
                 } else {
                     sendResponse(client, ":ft_irc 461 " + channelName + " :Operator parameter missing for mode o");
@@ -559,10 +567,6 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
         i++;
     }
     std::vector<std::string> params(tokens.begin() + 1, tokens.end());
-    
-/*     bool registered = client->isAuthenticated() &&
-                      (!client->getNickname().empty()) &&
-                      (!client->getUsername().empty()); */
                       
     switch (client->getState())
     {
@@ -570,7 +574,6 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
             if (cmd == "PASS")
             {
                 handlePass(client, params);
-                // Supposons que handlePass() met à jour l'état si le mot de passe est correct
                 client->setState(WAITING_FOR_NICK);
             }
             else
@@ -595,7 +598,6 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
             if (cmd == "USER")
             {
                 handleUser(client, params);
-                // Une fois que USER a été traitée, on passe à l'état REGISTERED
                 client->setState(REGISTERED);
                 sendResponse(client, "001 " + client->getNickname() + " :Bienvenue sur ft_irc");
             }
@@ -606,7 +608,6 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
             return;
             
         case REGISTERED:
-            // Le client est enregistré, traiter les autres commandes
             if (cmd == "JOIN")
                 handleJoin(server, client, params);
             else if (cmd == "PRIVMSG")
