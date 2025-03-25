@@ -105,21 +105,20 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
         sendResponse(client, ":ft_irc 403 " + channelName + " :Invalid channel name (must begin with '#')");
         return;
     }
+    
     Channel* channel = server->getChannelByName(channelName);
     if (channel)
     {
         if (channel->isClientInChannel(client->getFd()))
         {
             sendResponse(client, ":ft_irc 473 " + channelName + " :Cannot join channel already in");
-            return;          
+            return;
         }
-
         if (channel->getInviteOnly() && !channel->isClientInvited(client->getFd()))
         {
             sendResponse(client, ":ft_irc 473 " + channelName + " :Cannot join channel (+i)");
             return;
         }
-
         if (!channel->getKey().empty())
         {
             if (params.size() < 2)
@@ -135,10 +134,16 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
             }
         }
     }
+    
+    // Tente d'ajouter le client dans le channel (création auto si nécessaire)
     server->joinChannel(client->getFd(), channelName);
     channel = server->getChannelByName(channelName);
+    
     if (channel && channel->isClientInChannel(client->getFd()))
     {
+        // Retirer le client de la liste des invités (s'il y est)
+        channel->removeInvitedClient(client->getFd());
+        
         // Construire le message de JOIN avec préfixe complet
         std::string joinMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost JOIN " + channelName;
         server->broadcastToChannel(channelName, joinMsg, -1);
@@ -146,8 +151,11 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
         sendResponse(client, ":ft_irc 001 " + client->getNickname() + " :Joined channel " + channelName);
     }
     else
+    {
         sendResponse(client, ":ft_irc 403 " + channelName + " :No such channel");
+    }
 }
+
 
 // Handler pour la commande PRIVMSG
 void handlePrivmsg(Server* server, Client* client, const std::vector<std::string>& params)

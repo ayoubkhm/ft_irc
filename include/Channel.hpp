@@ -31,6 +31,7 @@ public:
     Channel &operator=(Channel const& copy);
     void addClient(int fd);
     void addInvitedClient(int fd);
+    void removeInvitedClient(int fd);
     void removeClient(int fd);
     bool isClientInChannel(int fd) const;
     bool isClientInvited(int fd) const;

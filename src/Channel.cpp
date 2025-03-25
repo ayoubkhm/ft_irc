@@ -55,6 +55,12 @@ void Channel::addInvitedClient(int fd)
     _invitedFd.insert(fd);
 }
 
+void Channel::removeInvitedClient(int fd)
+{
+    _invitedFd.erase(fd);
+}
+
+
 void Channel::removeClient(int fd)
 {
     std::set<int>::iterator it = _clients.find(fd);
