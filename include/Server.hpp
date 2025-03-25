@@ -20,7 +20,7 @@ public:
     void addChannel(const std::string &channelName);
     void removeChannel(const std::string &channelName);
     void joinChannel(int fd, const std::string &channelName);
-    void kickClient(int fd, const std::string &channelName, int target);
+    void kickClient(int fd, const std::string &channelName, int targetFd);
     void broadcastToChannel(const std::string &channelName, const std::string &message, int senderFd);
     int getFdByNickname(const std::string &nickname);
     Client* getClientByFd(int fd);
@@ -32,7 +32,7 @@ private:
     std::vector<struct pollfd> pollfds;
     int port;
     std::string password;
-    std::map<int, Client*> _ClientBook;
+    std::map<int, Client*> _ClientBook;  // Clé = FD, valeur = Client*
     std::map<std::string, Channel> _Channels;
 
     void initServer();

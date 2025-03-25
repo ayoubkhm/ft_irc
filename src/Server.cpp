@@ -21,18 +21,16 @@ Server::Server(int port, const std::string &password)
 
 Server::~Server()
 {
-    size_t i = 0;
-    while (i < pollfds.size())
+    // Ferme toutes les sockets du poll
+    for (size_t i = 0; i < pollfds.size(); ++i)
     {
         close(pollfds[i].fd);
-        i++;
     }
     
-    std::map<int, Client*>::iterator it = _ClientBook.begin();
-    while (it != _ClientBook.end())
+    // Libère les clients
+    for (std::map<int, Client*>::iterator it = _ClientBook.begin(); it != _ClientBook.end(); ++it)
     {
         delete it->second;
-        it++;
     }
 }
 
@@ -41,22 +39,21 @@ Server::Server(const Server &other)
   pollfds(other.pollfds),
   port(other.port),
   password(other.password),
-  _ClientBook(other._ClientBook),  // Attention : copie superficielle des pointeurs
-  _Channels(other._Channels)         // Nécessite que Channel soit copyable
+  _ClientBook(other._ClientBook),  // shallow copy des pointeurs
+  _Channels(other._Channels)         // nécessite que Channel soit copyable
 {
 }
 
-// Opérateur d'affectation (shallow copy)
 Server& Server::operator=(const Server &other) {
-if (this != &other) {
-    server_fd = other.server_fd;
-    pollfds = other.pollfds;
-    port = other.port;
-    password = other.password;
-    _ClientBook = other._ClientBook;  // shallow copy
-    _Channels = other._Channels;
-}
-return *this;
+    if (this != &other) {
+        server_fd = other.server_fd;
+        pollfds = other.pollfds;
+        port = other.port;
+        password = other.password;
+        _ClientBook = other._ClientBook;  // shallow copy
+        _Channels = other._Channels;
+    }
+    return *this;
 }
 
 void Server::initServer()
@@ -140,7 +137,6 @@ void Server::handleNewConnection()
     // displayRegistrationInstructions(_ClientBook[client_fd]);
 }
 
-
 void Server::handleClientMessage(size_t index)
 {
     char buffer[1024];
@@ -148,7 +144,6 @@ void Server::handleClientMessage(size_t index)
     
     if (bytes_read < 0)
     {
-        // Si aucune donnée n'est disponible, on ne fait rien (EAGAIN)
         if (errno == EAGAIN || errno == EWOULDBLOCK)
         {
             return;
@@ -157,7 +152,6 @@ void Server::handleClientMessage(size_t index)
         int fd = pollfds[index].fd;
         close(fd);
         pollfds.erase(pollfds.begin() + index);
-        
         std::map<int, Client*>::iterator it = _ClientBook.find(fd);
         if (it != _ClientBook.end())
         {
@@ -172,7 +166,6 @@ void Server::handleClientMessage(size_t index)
         int fd = pollfds[index].fd;
         close(fd);
         pollfds.erase(pollfds.begin() + index);
-        
         std::map<int, Client*>::iterator it = _ClientBook.find(fd);
         if (it != _ClientBook.end())
         {
@@ -187,7 +180,6 @@ void Server::handleClientMessage(size_t index)
     
     int fd = pollfds[index].fd;
     Client* client = NULL;
-    
     std::map<int, Client*>::iterator it = _ClientBook.find(fd);
     if (it != _ClientBook.end())
     {
@@ -208,34 +200,38 @@ void Server::broadcastToChannel(const std::string &channelName, const std::strin
 {
     std::map<std::string, Channel>::iterator it = _Channels.find(channelName);
     if (it == _Channels.end())
-    {
         return;
-    }
     
     Channel& channel = it->second;
-    const std::set<int>& fds = channel.getClientFds();
     
-    std::set<int>::const_iterator itFd = fds.begin();
-    while (itFd != fds.end())
+    // On récupère l'ID du client émetteur
+    unsigned int senderId = 0;
+    Client* sender = getClientByFd(senderFd);
+    if (sender)
+        senderId = sender->getId();
+    
+    // Parcours de tous les IDs clients dans le channel
+    const std::set<unsigned int>& clientIds = channel.getClientIds();
+    for (std::set<unsigned int>::const_iterator itId = clientIds.begin(); itId != clientIds.end(); ++itId)
     {
-        if (*itFd != senderFd)
+        if (*itId == senderId)
+            continue;
+        
+        // Recherche du client correspondant dans _ClientBook
+        for (std::map<int, Client*>::iterator itClient = _ClientBook.begin(); itClient != _ClientBook.end(); ++itClient)
         {
-            std::map<int, Client*>::iterator itClient = _ClientBook.find(*itFd);
-            if (itClient != _ClientBook.end())
+            if (itClient->second->getId() == *itId)
             {
-                Client* client = itClient->second;
                 std::string resp = message + "\r\n";
-                write(client->getFd(), resp.c_str(), resp.size());
+                write(itClient->second->getFd(), resp.c_str(), resp.size());
             }
         }
-        itFd++;
     }
 }
 
 void Server::addChannel(const std::string& channelName)
 {
-    std::map<std::string, Channel>::iterator it = _Channels.find(channelName);
-    if (it == _Channels.end())
+    if (_Channels.find(channelName) == _Channels.end())
     {
         Channel newChannel(channelName);
         _Channels.insert(std::make_pair(channelName, newChannel));
@@ -263,9 +259,13 @@ void Server::removeChannel(const std::string& channelName)
 
 void Server::joinChannel(int fd, const std::string& channelName)
 {
+    Client* client = getClientByFd(fd);
+    if (!client)
+        return;
+    unsigned int clientId = client->getId();
+    
     std::map<std::string, Channel>::iterator it = _Channels.find(channelName);
     bool newlyCreated = false;
-    
     if (it == _Channels.end())
     {
         // Créer le channel automatiquement
@@ -277,26 +277,36 @@ void Server::joinChannel(int fd, const std::string& channelName)
     }
     
     Channel& channel = it->second;
-    if (!channel.isClientInChannel(fd)) {
-        channel.addClient(fd);
-        std::cout << "Le client avec fd " << fd << " a rejoint le channel " << channelName << ".\n";}
+    if (!channel.isClientInChannel(clientId))
+    {
+        channel.addClient(clientId);
+        std::cout << "Le client avec ID " << clientId << " a rejoint le channel " << channelName << ".\n";
+    }
     
-    // Si le channel vient d'être créé, confère les droits d'opérateur au créateur
+    // Si le channel vient d'être créé, le rendre opérateur
     if (newlyCreated)
     {
-        channel.addOperator(fd);
-        std::map<int, Client*>::iterator itClient = _ClientBook.find(fd);
-        if (itClient != _ClientBook.end())
-        {
-            Client* client = itClient->second;
-            sendResponse(client, "NOTICE * :Vous êtes le créateur du channel " + channelName + " et vous êtes opérateur.");
-        }
+        channel.addOperator(clientId);
+        sendResponse(client, "NOTICE * :Vous êtes le créateur du channel " + channelName + " et vous êtes opérateur.");
     }
 }
 
-
-void Server::kickClient(int fd, const std::string& channelName, int target)
+void Server::kickClient(int fd, const std::string& channelName, int targetFd)
 {
+    Client* client = getClientByFd(fd);
+    Client* targetClient = getClientByFd(targetFd);
+    if (!client || !targetClient)
+        return;
+    
+    unsigned int clientId = client->getId();
+    unsigned int targetId = targetClient->getId();
+    
+    if (fd == targetFd)
+    {
+        std::cout << "Vous ne pouvez pas vous kick vous-même !\n";
+        return;
+    }
+    
     std::map<std::string, Channel>::iterator it = _Channels.find(channelName);
     if (it == _Channels.end())
     {
@@ -304,77 +314,27 @@ void Server::kickClient(int fd, const std::string& channelName, int target)
         return;
     }
     
-    if (fd == target)
-    {
-        std::cout << "Vous ne pouvez pas vous kick vous-même !\n";
-        return;
-    }
-    
     Channel& channel = it->second;
-    if (!channel.isOperator(fd))
+    if (!channel.isOperator(clientId))
     {
         std::cout << "Vous devez être opérateur pour expulser un client.\n";
         return;
     }
-    if (!channel.isClientInChannel(target))
+    if (!channel.isClientInChannel(targetId))
     {
-        std::cout << "Le client avec fd " << target << " n'est pas dans ce channel.\n";
+        std::cout << "Le client avec ID " << targetId << " n'est pas dans ce channel.\n";
         return;
     }
-    channel.removeClient(target);
-    std::cout << "Le client avec fd " << target << " a été expulsé du channel " << channelName << ".\n";
-}
-
-void Server::run()
-{
-    while (g_running)
-    {
-        int poll_count = poll(&pollfds[0], pollfds.size(), 1000);
-        if (poll_count < 0)
-        {
-            if (errno == EINTR)
-            {
-                continue;
-            }
-            std::cerr << "Erreur poll: " << strerror(errno) << "\n";
-            break;
-        }
-        
-        // Gérer les événements sur la socket serveur (toujours à l'index 0)
-        if (pollfds[0].revents & POLLIN)
-        {
-            handleNewConnection();
-        }
-        
-        // Sauvegarder la taille initiale des clients
-        size_t clientCount = pollfds.size();
-        size_t i = 1;
-        while (i < clientCount)
-        {
-            // Si l'élément a été supprimé, on arrête la boucle
-            if (i >= pollfds.size())
-            {
-                break;
-            }
-            if (pollfds[i].revents & POLLIN)
-            {
-                handleClientMessage(i);
-            }
-            i++;
-        }
-    }
+    channel.removeClient(targetId);
+    std::cout << "Le client avec ID " << targetId << " a été expulsé du channel " << channelName << ".\n";
 }
 
 int Server::getFdByNickname(const std::string &nickname)
 {
-    std::map<int, Client*>::iterator it = _ClientBook.begin();
-    while (it != _ClientBook.end())
+    for (std::map<int, Client*>::iterator it = _ClientBook.begin(); it != _ClientBook.end(); ++it)
     {
         if (it->second->getNickname() == nickname)
-        {
             return it->first;
-        }
-        it++;
     }
     return -1; // Pas trouvé
 }
@@ -386,19 +346,59 @@ Client* Server::getClientByFd(int fd)
     {
         return it->second;
     }
-    else
+    return NULL;
+}
+
+Channel* Server::getChannelByName(const std::string& channelName)
+{
+    std::map<std::string, Channel>::iterator it = _Channels.find(channelName);
+    if (it != _Channels.end())
     {
-        return NULL;
+        return &it->second;
     }
+    return NULL;
 }
 
 bool Server::checkDuplicateClient(std::string const nickClient)
 {
-    for (std::map<int, Client*>::iterator it = _ClientBook.begin(); it != _ClientBook.end(); it++)
+    for (std::map<int, Client*>::iterator it = _ClientBook.begin(); it != _ClientBook.end(); ++it)
     {
-        std::string Nickname = it->second->getNickname();
-        if (nickClient == Nickname)
+        if (it->second->getNickname() == nickClient)
             return true;
     }
     return false;
+}
+
+void Server::run()
+{
+    while (g_running)
+    {
+        int poll_count = poll(&pollfds[0], pollfds.size(), 1000);
+        if (poll_count < 0)
+        {
+            if (errno == EINTR)
+                continue;
+            std::cerr << "Erreur poll: " << strerror(errno) << "\n";
+            break;
+        }
+        
+        // Gestion de la socket serveur (index 0)
+        if (pollfds[0].revents & POLLIN)
+        {
+            handleNewConnection();
+        }
+        
+        size_t clientCount = pollfds.size();
+        size_t i = 1;
+        while (i < clientCount)
+        {
+            if (i >= pollfds.size())
+                break;
+            if (pollfds[i].revents & POLLIN)
+            {
+                handleClientMessage(i);
+            }
+            i++;
+        }
+    }
 }
