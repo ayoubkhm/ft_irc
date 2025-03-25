@@ -454,9 +454,15 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
     }
     std::string channelName = params[0];
     std::string modeParametre = params[1];
-    if (channelName.empty() || channelName[0] != '#') {
-        sendResponse(client, ":ft_irc 403 " + channelName + " :Invalid channel name (must begin with '#')");
-        return;
+
+    if (!channelName.empty()) {
+        if (client->getNickname() == channelName) 
+            return ;
+        else if (channelName[0] != '#') 
+        {
+            sendResponse(client, ":ft_irc 403 " + channelName + " :Invalid channel name (must begin with '#')");
+            return;
+        }
     }
     if (modeParametre.empty()) {
         sendResponse(client, ":ft_irc 403 " + modeParametre + " :Invalid parameters");
@@ -464,7 +470,7 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
     }
     Channel* channel = server->getChannelByName(channelName);
     int fdclient = server->getFdByNickname(client->getNickname());
-    if (!channel) {
+    if (!channel) {   
         sendResponse(client, ":ft_irc 403 " + channelName + " :No such channel");
         return;
     }
