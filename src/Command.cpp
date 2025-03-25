@@ -1,6 +1,7 @@
 #include "Command.hpp"
 #include "IRCUtils.hpp" // Déclare sendResponse(...)
 #include "Server.hpp"
+#include "RPL.hpp"
 #include <iostream>
 #include <vector>
 #include <cctype>
@@ -555,6 +556,7 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
                 }
                 break;
             default:
+                sendResponse(client, ERR_UMODEUNKNOWNFLAG(client->getNickname()));
                 break;
         }
     }
