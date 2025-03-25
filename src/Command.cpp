@@ -33,47 +33,53 @@ void handlePing(Client* client, const std::vector<std::string>& params)
 }
 
 // Handler pour la commande PASS
-void handlePass(Client* client, const std::vector<std::string>& params)
+bool handlePass(Client* client, const std::vector<std::string>& params)
 {
     if (params.empty())
     {
         sendResponse(client, "461 PASS :Not enough parameters");
-        return;
+        return false;
     }
     client->authenticate(params[0]);
-    if (client->isAuthenticated())
+    if (client->isAuthenticated()){
         sendResponse(client, "NOTICE :Mot de passe accepté");
-    else
+        return true;
+    }
+    else {
         sendResponse(client, "464 PASS :Mot de passe incorrect");
+        return false;
+    }
 }
 
 // Handler pour la commande NICK
-void handleNick(Server* server, Client* client, const std::vector<std::string>& params)
+bool handleNick(Server* server, Client* client, const std::vector<std::string>& params)
 {
     if (params.empty())
     {
         sendResponse(client, "461 NICK :Not enough parameters");
-        return;
+        return false;
     }
     std::string nickName = params[0];
     if (server->checkDuplicateClient(nickName))
     {
         sendResponse(client, "461 NICK : " + nickName + " Duplicate NICK");
-        return;
+        return false;
     }
     client->setNickname(const_cast<std::string&>(params[0]));
+    return true;
     // Pas d'écho welcome ici pour éviter les doublons.
 }
 
 // Handler pour la commande USER
-void handleUser(Client* client, const std::vector<std::string>& params)
+bool handleUser(Client* client, const std::vector<std::string>& params)
 {
     if (params.size() < 1)
     {
         sendResponse(client, "461 USER :Not enough parameters");
-        return;
+        return false;
     }
     client->setUsername(const_cast<std::string&>(params[0]));
+    return true;
     // Le welcome sera envoyé dans dispatchCommand.
 }
 
@@ -564,8 +570,8 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
         case WAITING_FOR_PASS:
             if (cmd == "PASS")
             {
-                handlePass(client, params);
-                client->setState(WAITING_FOR_NICK);
+                if (handlePass(client, params) == true)
+                    client->setState(WAITING_FOR_NICK);
             }
             else
                 sendResponse(client, "451 :You have not registered - PASS required first");
@@ -574,8 +580,8 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
         case WAITING_FOR_NICK:
             if (cmd == "NICK")
             {
-                handleNick(server, client, params);
-                client->setState(WAITING_FOR_USER);
+                if (handleNick(server, client, params) == true)
+                    client->setState(WAITING_FOR_USER);
             }
             else
                 sendResponse(client, "451 :You have not registered - NICK required next");
@@ -584,9 +590,9 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
         case WAITING_FOR_USER:
             if (cmd == "USER")
             {
-                handleUser(client, params);
-                client->setState(REGISTERED);
-                sendResponse(client, RPL_WELCOME(user_id(client->getNickname(), client->getUsername()), client->getNickname()));
+                if (handleUser(client, params) == true){
+                    client->setState(REGISTERED);
+                    sendResponse(client, RPL_WELCOME(user_id(client->getNickname(), client->getUsername()), client->getNickname()));}
             }
             else
                 sendResponse(client, "451 :You have not registered - USER required next");
