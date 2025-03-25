@@ -14,6 +14,7 @@ enum ClientState {
 class Client {
 private:
     int _fd;
+    unsigned int _id;            // Nouvel identifiant unique pour le client
     int _port;
     std::string _Nickname;
     std::string _Username;
@@ -23,6 +24,7 @@ private:
     bool _welcomeSent;
     ClientState state;
 
+    static unsigned int s_nextId; // Compteur statique pour générer les IDs uniques
 
 public:
     // Constructeur avec mot de passe attendu
@@ -32,6 +34,7 @@ public:
     Client &operator=(Client const& copy);
     
     int getFd() const;
+    unsigned int getId() const;    // Accesseur pour l'identifiant unique
     int getPort() const;
     std::string getNickname() const;
     std::string getUsername() const;
@@ -46,6 +49,7 @@ public:
     
     // Getter pour le mot de passe attendu
     std::string getExpectedPassword() const;
+    
     bool hasReceivedWelcome() const { return _welcomeSent; }
     void setWelcomeReceived(bool val) { _welcomeSent = val; }
     ClientState getState() const { return state; }

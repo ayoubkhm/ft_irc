@@ -1,3 +1,5 @@
+// Command.cpp
+
 #include "Command.hpp"
 #include "IRCUtils.hpp" // Déclare sendResponse(...)
 #include "Server.hpp"
@@ -10,18 +12,7 @@
 #include <unistd.h>
 #include <cstdlib>
 
-// Fonctions d'assistance
-
-// Fonction qui check si la string passée en paramètre est un nom de channel, si oui, le renvoie
-Channel* Server::getChannelByName(const std::string& channelName)
-{
-    std::map<std::string, Channel>::iterator it = _Channels.find(channelName);
-    if (it != _Channels.end())
-    {
-        return &it->second;
-    }
-    return NULL;
-}
+// (La définition de Server::getChannelByName a été supprimée ici car elle est définie dans Server.cpp)
 
 // Handler pour la commande CAP
 void handleCap(Client* client, const std::vector<std::string>& params)
@@ -39,7 +30,7 @@ void handlePing(Client* client, const std::vector<std::string>& params)
         sendResponse(client, "409 :No origin specified");
         return;
     }
-    sendResponse(client, "PONG " + params[0]);
+    sendResponse(client, RPL_PONG(user_id(client->getNickname(), client->getUsername()), params[0]));
 }
 
 // Handler pour la commande PASS
@@ -62,7 +53,7 @@ void handlePass(Client* client, const std::vector<std::string>& params)
 }
 
 // Handler pour la commande NICK
-void handleNick(Server* server ,Client* client, const std::vector<std::string>& params)
+void handleNick(Server* server, Client* client, const std::vector<std::string>& params)
 {
     if (params.empty())
     {
@@ -70,7 +61,7 @@ void handleNick(Server* server ,Client* client, const std::vector<std::string>& 
         return;
     }
     std::string nickName = params[0];
-    if (server->checkDuplicateClient(nickName) == true)
+    if (server->checkDuplicateClient(nickName))
     {
         sendResponse(client, "461 NICK : " + nickName + " Duplicate NICK");
         return;
@@ -109,6 +100,8 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
     Channel* channel = server->getChannelByName(channelName);
     if (channel)
     {
+        // Remarque : ici, le test utilise encore le FD du client pour vérifier la présence.
+        // Si tu as besoin d'utiliser l'ID unique, n'oublie pas de récupérer l'ID via client->getId()
         if (channel->isClientInChannel(client->getFd()))
         {
             sendResponse(client, ":ft_irc 473 " + channelName + " :Cannot join channel already in");
@@ -155,7 +148,6 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
         sendResponse(client, ":ft_irc 403 " + channelName + " :No such channel");
     }
 }
-
 
 // Handler pour la commande PRIVMSG
 void handlePrivmsg(Server* server, Client* client, const std::vector<std::string>& params)
@@ -218,8 +210,6 @@ void handlePrivmsg(Server* server, Client* client, const std::vector<std::string
     }
 }
 
-
-// Handler pour la commande KICK
 // Handler pour la commande KICK
 void handleKick(Server* server, Client* client, const std::vector<std::string>& params)
 {
@@ -270,19 +260,16 @@ void handleKick(Server* server, Client* client, const std::vector<std::string>& 
     Client* kickedClient = server->getClientByFd(targetFd);
     if (kickedClient)
     {
-        // Ici, on envoie une notification avec le préfixe du serveur
         sendResponse(kickedClient, ":localhost NOTICE KICK :You have been kicked from " + channelName);
     }
     
     // Diffuser un message KICK à tous les membres du channel
-    // Exemple : ":operator KICK #channel target :Kicked by operator"
     std::string kickMsg = ":" + client->getNickname() + " KICK " + channelName + " " + params[1] + " :Kicked by " + client->getNickname();
     server->broadcastToChannel(channelName, kickMsg, -1);
     
     // Retirer le client du channel
     server->kickClient(client->getFd(), channelName, targetFd);
 }
-
 
 // Handler pour la commande INVITE
 void handleInvite(Server* server, Client* client, const std::vector<std::string>& params)
@@ -340,8 +327,7 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
         return;
     }
     
-    // Envoyer au client invité une commande INVITE formatée correctement :
-    // Par exemple : ":youb!<username>@localhost INVITE debian :#test"
+    // Envoyer au client invité une commande INVITE formatée correctement
     sendResponse(invitedClient, ":" + client->getNickname() + "!" + client->getUsername() +
                     "@localhost INVITE " + invitedClient->getNickname() + " :" + channelName);
     std::cout << "DEBUG: Invitation envoyée au client fd " << targetFd 
@@ -351,7 +337,7 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
     if (!channel->isClientInvited(targetFd))
         channel->addInvitedClient(targetFd);
     
-    // Diffuser à tous les membres du channel le message JOIN du client invité
+    // Diffuser, si nécessaire, le message JOIN du client invité
     Channel* ch = server->getChannelByName(channelName);
     if (ch && ch->isClientInChannel(targetFd))
     {
@@ -366,8 +352,6 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
     sendResponse(client, ":ft_irc 341 " + channelName + " " + invitedClient->getNickname() +
                     " :Successfuly added to invite list");
 }
-
-
 
 // Handler pour la commande PART
 void handlePart(Server* server, Client* client, const std::vector<std::string>& params)
@@ -445,13 +429,11 @@ void handleTopic(Server* server, Client* client, const std::vector<std::string>&
     channel->setTopic(new_topic);
 
     // Construire le message TOPIC au format IRC
-    // Par exemple: ":youb!jfoijf@localhost TOPIC #test :New Topic"
     std::string topicMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost TOPIC " + channelName + " :" + new_topic;
     
     // Diffuser ce message à tous les membres du channel
     server->broadcastToChannel(channelName, topicMsg, -1);
 }
-
 
 // Handler pour la commande MODE (dummy)
 void handleMode(Server* server, Client* client, const std::vector<std::string>& params)
@@ -466,7 +448,7 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
 
     if (!channelName.empty()) {
         if (client->getNickname() == channelName) 
-            return ;
+            return;
         else if (channelName[0] != '#') 
         {
             sendResponse(client, ":ft_irc 403 " + channelName + " :Invalid channel name (must begin with '#')");
@@ -498,26 +480,13 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
         }
         switch (modeParametre[i]) {
             case 'i': // Mode invite-only
-                if (sign == '+') {
-                    // Activer le mode invite-only pour le channel
-                    channel->setInviteOnly(true);
-                } else {
-                    // Désactiver le mode invite-only
-                    channel->setInviteOnly(false);
-                }
+                channel->setInviteOnly(sign == '+');
                 break;
             case 't': // Mode topic restricted
-                if (sign == '+') {
-                    // Restreindre la modification du topic aux opérateurs
-                    channel->setTopicRestricted(true);
-                } else {
-                    // Permettre à tous de modifier le topic
-                    channel->setTopicRestricted(false);
-                }
+                channel->setTopicRestricted(sign == '+');
                 break;
             case 'k': // Mode clé (password)
                 if (sign == '+') {
-                    // Pour activer le mode +k, il faut récupérer en supplément la clé
                     if (paramsIdx < params.size())
                         channel->setKey(params[paramsIdx++]);
                     else {
@@ -525,7 +494,6 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
                         return;
                     }
                 } else {
-                    // Désactiver la clé du channel
                     channel->setKey("");
                 }
                 break;
@@ -543,7 +511,8 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
                             channel->removeOperator(aimFd);
                         else {
                             sendResponse(client, ":ft_irc 461 " + channelName + " :Operator cant be remove");
-                            return;}
+                            return;
+                        }
                     }
                 } else {
                     sendResponse(client, ":ft_irc 461 " + channelName + " :Operator parameter missing for mode o");

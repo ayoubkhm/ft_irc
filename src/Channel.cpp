@@ -1,7 +1,13 @@
 #include "Channel.hpp"
 
 Channel::Channel(const std::string& channelName, size_t maxClients)
-    : _name(channelName), _topic(""), _maxClients(maxClients)
+    : _name(channelName),
+      _topic(""),
+      _maxClients(maxClients),
+      _inviteOnly(false),
+      _topicRestricted(false),
+      _key(""),
+      _userLimit(0)
 {
 }
 
@@ -9,93 +15,90 @@ Channel::~Channel() {
 }
 
 Channel::Channel(const Channel& other)
-: _name(other._name),
-  _topic(other._topic),
-  _clients(other._clients),
-  _operators(other._operators),
-  _invitedFd(other._invitedFd),
-  _maxClients(other._maxClients),
-  _inviteOnly(other._inviteOnly),
-  _topicRestricted(other._topicRestricted),
-  _key(other._key),
-  _userLimit(other._userLimit)
+    : _name(other._name),
+      _topic(other._topic),
+      _clients(other._clients),
+      _operators(other._operators),
+      _invitedIds(other._invitedIds),
+      _maxClients(other._maxClients),
+      _inviteOnly(other._inviteOnly),
+      _topicRestricted(other._topicRestricted),
+      _key(other._key),
+      _userLimit(other._userLimit)
 {
 }
 
-// Surcharge de l'opérateur d'affectation
 Channel& Channel::operator=(const Channel& other) {
-if (this != &other) {
-    _name = other._name;
-    _topic = other._topic;
-    _clients = other._clients;
-    _operators = other._operators;
-    _invitedFd = other._invitedFd;
-    _maxClients = other._maxClients;
-    _inviteOnly = other._inviteOnly;
-    _topicRestricted = other._topicRestricted;
-    _key = other._key;
-    _userLimit = other._userLimit;
-}
-return *this;
+    if (this != &other) {
+        _name         = other._name;
+        _topic        = other._topic;
+        _clients      = other._clients;
+        _operators    = other._operators;
+        _invitedIds   = other._invitedIds;
+        _maxClients   = other._maxClients;
+        _inviteOnly   = other._inviteOnly;
+        _topicRestricted = other._topicRestricted;
+        _key          = other._key;
+        _userLimit    = other._userLimit;
+    }
+    return *this;
 }
 
-
-void Channel::addClient(int fd)
+void Channel::addClient(unsigned int clientId)
 {
     if (_clients.size() >= _maxClients)
     {
         std::cerr << "Le channel " << _name << " est plein !" << std::endl;
         return;
     }
-    _clients.insert(fd);
+    _clients.insert(clientId);
 }
 
-void Channel::addInvitedClient(int fd)
+void Channel::addInvitedClient(unsigned int clientId)
 {
-    _invitedFd.insert(fd);
+    _invitedIds.insert(clientId);
 }
 
-void Channel::removeInvitedClient(int fd)
+void Channel::removeInvitedClient(unsigned int clientId)
 {
-    _invitedFd.erase(fd);
+    _invitedIds.erase(clientId);
 }
 
-
-void Channel::removeClient(int fd)
+void Channel::removeClient(unsigned int clientId)
 {
-    std::set<int>::iterator it = _clients.find(fd);
+    std::set<unsigned int>::iterator it = _clients.find(clientId);
     if (it != _clients.end())
     {
         _clients.erase(it);
-        std::cout << "Client avec fd " << fd << " a été expulsé du channel." << std::endl;
+        std::cout << "Client avec ID " << clientId << " a été expulsé du channel." << std::endl;
     }
 }
 
-bool Channel::isClientInChannel(int fd) const
+bool Channel::isClientInChannel(unsigned int clientId) const
 {
-    return _clients.find(fd) != _clients.end();
+    return _clients.find(clientId) != _clients.end();
 }
 
-bool Channel::isOperator(int fd) const
+bool Channel::isOperator(unsigned int clientId) const
 {
-    return _operators.find(fd) != _operators.end();
+    return _operators.find(clientId) != _operators.end();
 }
 
-bool Channel::isClientInvited(int fd) const
+bool Channel::isClientInvited(unsigned int clientId) const
 {
-    return _invitedFd.find(fd) != _invitedFd.end();
+    return _invitedIds.find(clientId) != _invitedIds.end();
 }
 
-void Channel::addOperator(int fd)
+void Channel::addOperator(unsigned int clientId)
 {
-    _operators.insert(fd);
-    std::cout << "Client avec fd " << fd << " est maintenant opérateur." << std::endl;
+    _operators.insert(clientId);
+    std::cout << "Client avec ID " << clientId << " est maintenant opérateur." << std::endl;
 }
 
-void Channel::removeOperator(int fd)
+void Channel::removeOperator(unsigned int clientId)
 {
-    _operators.erase(fd);
-    std::cout << "Client avec fd " << fd << " n'est plus opérateur." << std::endl;
+    _operators.erase(clientId);
+    std::cout << "Client avec ID " << clientId << " n'est plus opérateur." << std::endl;
 }
 
 void Channel::setTopic(const std::string& newTopic)
@@ -117,11 +120,9 @@ size_t Channel::getMaxClients() const
 void Channel::printClients() const
 {
     std::cout << "Clients dans le channel " << _name << " :" << std::endl;
-    std::set<int>::const_iterator it = _clients.begin();
-    while (it != _clients.end())
+    for (std::set<unsigned int>::const_iterator it = _clients.begin(); it != _clients.end(); ++it)
     {
-        std::cout << "- Client avec fd : " << *it << std::endl;
-        ++it;
+        std::cout << "- Client avec ID : " << *it << std::endl;
     }
 }
 
@@ -130,11 +131,10 @@ size_t Channel::getClientCount() const
     return _clients.size();
 }
 
-const std::set<int>& Channel::getClientFds() const
+const std::set<unsigned int>& Channel::getClientIds() const
 {
     return _clients;
 }
-// Getters et setters pour les modes
 
 void Channel::setInviteOnly(bool inviteOnly) {
     _inviteOnly = inviteOnly;
