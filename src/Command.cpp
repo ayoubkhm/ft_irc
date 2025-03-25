@@ -18,7 +18,6 @@
 void handleCap(Client* client, const std::vector<std::string>& params)
 {
     (void)params; // Paramètre inutilisé
-    // Renvoie une liste de capacités non vide pour satisfaire irssi
     sendResponse(client, "CAP * LS :multi-prefix");
 }
 
@@ -43,13 +42,9 @@ void handlePass(Client* client, const std::vector<std::string>& params)
     }
     client->authenticate(params[0]);
     if (client->isAuthenticated())
-    {
         sendResponse(client, "NOTICE :Mot de passe accepté");
-    }
     else
-    {
         sendResponse(client, "464 PASS :Mot de passe incorrect");
-    }
 }
 
 // Handler pour la commande NICK
@@ -67,7 +62,7 @@ void handleNick(Server* server, Client* client, const std::vector<std::string>& 
         return;
     }
     client->setNickname(const_cast<std::string&>(params[0]));
-    // Ne pas envoyer d'écho welcome ici pour éviter les doublons.
+    // Pas d'écho welcome ici pour éviter les doublons.
 }
 
 // Handler pour la commande USER
@@ -79,7 +74,7 @@ void handleUser(Client* client, const std::vector<std::string>& params)
         return;
     }
     client->setUsername(const_cast<std::string&>(params[0]));
-    // Ne pas envoyer d'écho welcome ici ; ce sera géré dans dispatchCommand.
+    // Le welcome sera envoyé dans dispatchCommand.
 }
 
 // Handler pour la commande JOIN
@@ -100,14 +95,13 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
     Channel* channel = server->getChannelByName(channelName);
     if (channel)
     {
-        // Remarque : ici, le test utilise encore le FD du client pour vérifier la présence.
-        // Si tu as besoin d'utiliser l'ID unique, n'oublie pas de récupérer l'ID via client->getId()
-        if (channel->isClientInChannel(client->getFd()))
+        // Vérification par ID unique
+        if (channel->isClientInChannel(client->getId()))
         {
             sendResponse(client, ":ft_irc 473 " + channelName + " :Cannot join channel already in");
             return;
         }
-        if (channel->getInviteOnly() && !channel->isClientInvited(client->getFd()))
+        if (channel->getInviteOnly() && !channel->isClientInvited(client->getId()))
         {
             sendResponse(client, ":ft_irc 473 " + channelName + " :Cannot join channel (+i)");
             return;
@@ -128,19 +122,18 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
         }
     }
     
-    // Tente d'ajouter le client dans le channel (création auto si nécessaire)
+    // Ajout du client dans le channel
+    // On laisse le serveur gérer la création du channel via le FD, puis il utilisera getId() en interne.
     server->joinChannel(client->getFd(), channelName);
     channel = server->getChannelByName(channelName);
     
-    if (channel && channel->isClientInChannel(client->getFd()))
+    if (channel && channel->isClientInChannel(client->getId()))
     {
-        // Retirer le client de la liste des invités (s'il y est)
-        channel->removeInvitedClient(client->getFd());
-        
-        // Construire le message de JOIN avec préfixe complet
+        // Retirer le client de la liste des invités
+        channel->removeInvitedClient(client->getId());
+        // Message JOIN complet
         std::string joinMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost JOIN " + channelName;
         server->broadcastToChannel(channelName, joinMsg, -1);
-        // Envoyer une confirmation au client avec préfixe du serveur
         sendResponse(client, ":ft_irc 001 " + client->getNickname() + " :Joined channel " + channelName);
     }
     else
@@ -158,50 +151,45 @@ void handlePrivmsg(Server* server, Client* client, const std::vector<std::string
         return;
     }
     std::string target = params[0];
-    std::string message = "";
-    size_t i = 1;
-    while (i < params.size())
+    std::string message;
+    for (size_t i = 1; i < params.size(); i++)
     {
         if (i > 1)
             message += " ";
         message += params[i];
-        i++;
     }
     
-    // Si le message est destiné à un channel
+    // Message vers un channel
     if (!target.empty() && target[0] == '#')
     {
-        // Vérifier que le client émetteur est bien membre du channel
         Channel* channel = server->getChannelByName(target);
-        if (channel == NULL || !channel->isClientInChannel(client->getFd()))
+        if (channel == NULL || !channel->isClientInChannel(client->getId()))
         {
             sendResponse(client, "442 " + target + " :You're not on that channel");
             return;
         }
-        
         std::string msg = ":" + client->getNickname() + " PRIVMSG " + target + " :" + message;
         server->broadcastToChannel(target, msg, client->getFd());
         sendResponse(client, "NOTICE PRIVMSG :Message delivered to " + target);
     }
-    // Si le message est destiné à un utilisateur privé
+    // Message privé
     else if (!target.empty() && target[0] != '#' && target != client->getNickname())
     {
-        int targetClientFd = server->getFdByNickname(target);
-        if (targetClientFd == -1)
+        int targetFd = server->getFdByNickname(target);
+        if (targetFd == -1)
         {
             sendResponse(client, "401 " + target + " :No such nick/channel");
             return;
         }
-        Client* targetclient = server->getClientByFd(targetClientFd);
-        if (!targetclient)
+        Client* targetClient = server->getClientByFd(targetFd);
+        if (!targetClient)
         {
             sendResponse(client, "402 " + target + " :No such nick/channel");
             return;
         }
-        // Construire le message privé complet avec préfixe
         std::string msg = ":" + client->getNickname() + "!" + client->getUsername() +
                           "@localhost PRIVMSG " + target + " :" + message;
-        sendResponse(targetclient, msg);
+        sendResponse(targetClient, msg);
         sendResponse(client, "NOTICE PRIVMSG :Message delivered to " + target);
     }
     else
@@ -219,20 +207,26 @@ void handleKick(Server* server, Client* client, const std::vector<std::string>& 
         return;
     }
     std::string channelName = params[0];
-    // Vérifier que le nom du channel commence par '#'
     if (channelName.empty() || channelName[0] != '#')
     {
         sendResponse(client, ":ft_irc 403 " + channelName + " :Invalid channel name (must begin with '#')");
         return;
     }
     
+    // Récupérer le client ciblé par son surnom, puis son ID
     int targetFd = server->getFdByNickname(params[1]);
     if (targetFd == -1)
     {
         sendResponse(client, "401 " + params[1] + " :No such nick/channel");
         return;
     }
-    if (targetFd == client->getFd())
+    Client* targetClient = server->getClientByFd(targetFd);
+    if (!targetClient)
+    {
+        sendResponse(client, "402 " + params[1] + " :No such nick/channel");
+        return;
+    }
+    if (targetClient->getId() == client->getId())
     {
         sendResponse(client, "502 :Cannot kick yourself");
         return;
@@ -245,29 +239,24 @@ void handleKick(Server* server, Client* client, const std::vector<std::string>& 
         return;
     }
     
-    if (!channel->isClientInChannel(targetFd))
+    if (!channel->isClientInChannel(targetClient->getId()))
     {
         sendResponse(client, "441 " + params[1] + " " + channelName + " :They aren't on that channel");
         return;
     }
-    if (!channel->isOperator(client->getFd()))
+    if (!channel->isOperator(client->getId()))
     {
         sendResponse(client, "482 " + channelName + " :You're not a channel operator");
         return;
     }
     
-    // Notifier le client ciblé qu'il va être kické
-    Client* kickedClient = server->getClientByFd(targetFd);
-    if (kickedClient)
-    {
-        sendResponse(kickedClient, ":localhost NOTICE KICK :You have been kicked from " + channelName);
-    }
+    // Notifier le client ciblé
+    sendResponse(targetClient, ":localhost NOTICE KICK :You have been kicked from " + channelName);
     
-    // Diffuser un message KICK à tous les membres du channel
     std::string kickMsg = ":" + client->getNickname() + " KICK " + channelName + " " + params[1] + " :Kicked by " + client->getNickname();
     server->broadcastToChannel(channelName, kickMsg, -1);
     
-    // Retirer le client du channel
+    // Retirer le client du channel via son ID
     server->kickClient(client->getFd(), channelName, targetFd);
 }
 
@@ -281,7 +270,6 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
     }
     
     std::string channelName = params[0];
-    // Vérifier que le nom du channel commence par '#'
     if (channelName.empty() || channelName[0] != '#')
     {
         sendResponse(client, ":ft_irc 403 " + channelName + " :Invalid channel name (must begin with '#')");
@@ -289,36 +277,24 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
     }
     
     int targetFd = server->getFdByNickname(params[1]);
-    Channel* channel = server->getChannelByName(channelName);
     if (targetFd == -1)
     {
         sendResponse(client, "401 " + params[1] + " :No such nick/channel");
         return;
     }
+    
     if (targetFd == client->getFd())
     {
         sendResponse(client, "502 :Cannot invite yourself");
         return;
     }
+    
+    Channel* channel = server->getChannelByName(channelName);
     if (!channel)
     {
         sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
         return;
     }
-    
-    if (channel->isClientInChannel(targetFd))
-    {
-        sendResponse(client, ERR_USERONCHANNEL(client->getUsername(), client->getNickname(), channelName));
-        return;
-    }
-    if (channel->isClientInvited(targetFd))
-    {
-        sendResponse(client, "443 " + params[1] + " " + channelName + " :is already invited");
-        return;
-    }
-    
-    std::cout << "DEBUG: Tentative d'inviter le client fd " << targetFd 
-              << " au channel " << channelName << std::endl;
     
     Client* invitedClient = server->getClientByFd(targetFd);
     if (!invitedClient)
@@ -327,28 +303,40 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
         return;
     }
     
-    // Envoyer au client invité une commande INVITE formatée correctement
+    if (channel->isClientInChannel(invitedClient->getId()))
+    {
+        sendResponse(client, ERR_USERONCHANNEL(client->getUsername(), client->getNickname(), channelName));
+        return;
+    }
+    if (channel->isClientInvited(invitedClient->getId()))
+    {
+        sendResponse(client, "443 " + params[1] + " " + channelName + " :is already invited");
+        return;
+    }
+    
+    std::cout << "DEBUG: Tentative d'inviter le client ID " << invitedClient->getId() 
+              << " au channel " << channelName << std::endl;
+    
+    // Envoyer la commande INVITE formatée au client invité
     sendResponse(invitedClient, ":" + client->getNickname() + "!" + client->getUsername() +
                     "@localhost INVITE " + invitedClient->getNickname() + " :" + channelName);
-    std::cout << "DEBUG: Invitation envoyée au client fd " << targetFd 
+    std::cout << "DEBUG: Invitation envoyée au client ID " << invitedClient->getId() 
               << " pour le channel " << channelName << std::endl;
     
-    // Ajouter le client invité dans le channel
-    if (!channel->isClientInvited(targetFd))
-        channel->addInvitedClient(targetFd);
+    // Ajouter l'ID invité dans le channel
+    if (!channel->isClientInvited(invitedClient->getId()))
+        channel->addInvitedClient(invitedClient->getId());
     
-    // Diffuser, si nécessaire, le message JOIN du client invité
-    Channel* ch = server->getChannelByName(channelName);
-    if (ch && ch->isClientInChannel(targetFd))
+    // Diffuser éventuellement le JOIN du client invité s'il est déjà présent
+    if (channel->isClientInChannel(invitedClient->getId()))
     {
         std::string joinMsg = ":" + invitedClient->getNickname() + "!" + invitedClient->getUsername() +
                               "@localhost JOIN " + channelName;
         server->broadcastToChannel(channelName, joinMsg, -1);
     }
-    std::cout << "DEBUG: Le client avec fd " << targetFd 
-              << " a ete invite avec succes " << channelName << " suite à l'invitation." << std::endl;
+    std::cout << "DEBUG: Le client avec ID " << invitedClient->getId() 
+              << " a été invité avec succès à " << channelName << std::endl;
     
-    // Notifier l'émetteur avec un message numérique confirmant l'invitation
     sendResponse(client, ":ft_irc 341 " + channelName + " " + invitedClient->getNickname() +
                     " :Successfuly added to invite list");
 }
@@ -362,7 +350,6 @@ void handlePart(Server* server, Client* client, const std::vector<std::string>& 
         return;
     }
     std::string channelName = params[0];
-    // Vérifier que le nom du channel commence par '#'
     if (channelName.empty() || channelName[0] != '#')
     {
         sendResponse(client, ":ft_irc 403 " + channelName + " :Invalid channel name (must begin with '#')");
@@ -375,12 +362,12 @@ void handlePart(Server* server, Client* client, const std::vector<std::string>& 
         sendResponse(client, ":ft_irc 403 " + channelName + " :No such channel");
         return;
     }
-    if (!channel->isClientInChannel(client->getFd()))
+    if (!channel->isClientInChannel(client->getId()))
     {
         sendResponse(client, ":ft_irc 442 " + channelName + " :You're not on that channel");
         return;
     }
-    channel->removeClient(client->getFd());
+    channel->removeClient(client->getId());
     sendResponse(client, ":ft_irc PART " + channelName + " :You have left the channel");
     std::string partMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost PART " + channelName;
     server->broadcastToChannel(channelName, partMsg, client->getFd());
@@ -389,13 +376,13 @@ void handlePart(Server* server, Client* client, const std::vector<std::string>& 
 // Handler pour la commande TOPIC
 void handleTopic(Server* server, Client* client, const std::vector<std::string>& params)
 {
-    if (params.size() < 1) {
+    if (params.size() < 1)
+    {
         sendResponse(client, "Invalid arguments\nUsage for TOPIC: TOPIC <channel_name> (new topic)");
         return;
     }
 
     std::string channelName = params[0];
-    // Vérifier que le nom du channel commence par '#'
     if (channelName.empty() || channelName[0] != '#')
     {
         sendResponse(client, ":ft_irc 403 " + channelName + " :Invalid channel name (must begin with '#')");
@@ -403,42 +390,40 @@ void handleTopic(Server* server, Client* client, const std::vector<std::string>&
     }
 
     Channel* channel = server->getChannelByName(channelName);
-    if (!channel) {
+    if (!channel)
+    {
         sendResponse(client, ":ft_irc 403 " + channelName + " :No such channel");
         return;
     }
 
-    if (params.size() == 1) {
-        // Afficher le topic actuel
+    if (params.size() == 1)
+    {
         std::string current_topic = channel->getTopic();
-        if (current_topic.empty()) {
+        if (current_topic.empty())
             sendResponse(client, "There's no topic for this channel yet.");
-        } else {
+        else
             sendResponse(client, "Current topic of the channel: " + current_topic);
-        }
         return;
     }
 
-    // Mettre à jour le topic avec le nouveau contenu
     std::string new_topic;
-    for (size_t i = 1; i < params.size(); i++) {
+    for (size_t i = 1; i < params.size(); i++)
+    {
         if (i > 1)
             new_topic += " ";
         new_topic += params[i];
     }
     channel->setTopic(new_topic);
 
-    // Construire le message TOPIC au format IRC
-    std::string topicMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost TOPIC " + channelName + " :" + new_topic;
-    
-    // Diffuser ce message à tous les membres du channel
+    std::string topicMsg = ":" + client->getNickname() + "!" + client->getUsername() +
+                           "@localhost TOPIC " + channelName + " :" + new_topic;
     server->broadcastToChannel(channelName, topicMsg, -1);
 }
 
 // Handler pour la commande MODE (dummy)
 void handleMode(Server* server, Client* client, const std::vector<std::string>& params)
 {
-    if (params.size() < 2) 
+    if (params.size() < 2)
     {
         sendResponse(client, "Invalid arguments\nUsage for MODE: MODE #<channel_name> <mode parameters>");
         return;
@@ -446,89 +431,114 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
     std::string channelName = params[0];
     std::string modeParametre = params[1];
 
-    if (!channelName.empty()) {
-        if (client->getNickname() == channelName) 
+    if (!channelName.empty())
+    {
+        if (client->getNickname() == channelName)
             return;
-        else if (channelName[0] != '#') 
+        else if (channelName[0] != '#')
         {
             sendResponse(client, ":ft_irc 403 " + channelName + " :Invalid channel name (must begin with '#')");
             return;
         }
     }
-    if (modeParametre.empty()) {
+    if (modeParametre.empty())
+    {
         sendResponse(client, ":ft_irc 403 " + modeParametre + " :Invalid parameters");
         return;
     }
     Channel* channel = server->getChannelByName(channelName);
-    int fdclient = server->getFdByNickname(client->getNickname());
-    if (!channel) {   
+    // Utiliser l'ID unique pour vérifier l'opérateur
+    if (!channel)
+    {
         sendResponse(client, ":ft_irc 403 " + channelName + " :No such channel");
         return;
     }
-    if (!channel->isOperator(fdclient))
+    if (!channel->isOperator(client->getId()))
     {
         sendResponse(client, ":ft_irc 403 " + channelName + " :Client: " + client->getNickname() + " not allow to MODE");
-        return; 
+        return;
     }
     size_t paramsIdx = 2;
     char sign = '=';
     for (size_t i = 0; i < modeParametre.size(); i++)
     {
-        if (modeParametre[i] == '-' || modeParametre[i] == '+') {
+        if (modeParametre[i] == '-' || modeParametre[i] == '+')
+        {
             sign = modeParametre[i];
             continue;
         }
-        switch (modeParametre[i]) {
-            case 'i': // Mode invite-only
+        switch (modeParametre[i])
+        {
+            case 'i': // invite-only
                 channel->setInviteOnly(sign == '+');
                 break;
-            case 't': // Mode topic restricted
+            case 't': // topic restricted
                 channel->setTopicRestricted(sign == '+');
                 break;
-            case 'k': // Mode clé (password)
-                if (sign == '+') {
+            case 'k': // clé (password)
+                if (sign == '+')
+                {
                     if (paramsIdx < params.size())
                         channel->setKey(params[paramsIdx++]);
-                    else {
+                    else
+                    {
                         sendResponse(client, ":ft_irc 461 " + channelName + " :Key parameter missing for +k");
                         return;
                     }
-                } else {
+                }
+                else
+                {
                     channel->setKey("");
                 }
                 break;
-            case 'o': // Donner ou retirer les privilèges d'opérateur
-                if (paramsIdx < params.size()) {
+            case 'o': // opérateur
+                if (paramsIdx < params.size())
+                {
                     if (sign == '+')
                     {
                         int targetFd = server->getFdByNickname(params[paramsIdx++]);
-                        channel->addOperator(targetFd);
+                        Client* target = server->getClientByFd(targetFd);
+                        if (target)
+                            channel->addOperator(target->getId());
                     }
                     else
                     {
                         int aimFd = server->getFdByNickname(params[paramsIdx++]);
-                        if (!channel->isOperator(aimFd))
-                            channel->removeOperator(aimFd);
-                        else {
-                            sendResponse(client, ":ft_irc 461 " + channelName + " :Operator cant be remove");
-                            return;
+                        Client* target = server->getClientByFd(aimFd);
+                        if (target)
+                        {
+                            if (!channel->isOperator(target->getId()))
+                                channel->removeOperator(target->getId());
+                            else
+                            {
+                                sendResponse(client, ":ft_irc 461 " + channelName + " :Operator cant be remove");
+                                return;
+                            }
                         }
                     }
-                } else {
+                }
+                else
+                {
                     sendResponse(client, ":ft_irc 461 " + channelName + " :Operator parameter missing for mode o");
                     return;
                 }
                 break;
-            case 'l': // Limite du nombre d'utilisateurs
-                if (sign == '+') {
-                    if (paramsIdx < params.size()) {
+            case 'l': // limite d'utilisateurs
+                if (sign == '+')
+                {
+                    if (paramsIdx < params.size())
+                    {
                         int limit = std::atoi(params[paramsIdx++].c_str());
                         channel->setUserLimit(limit);
-                    } else {
+                    }
+                    else
+                    {
                         sendResponse(client, ":ft_irc 461 " + channelName + " :User limit parameter missing for +l");
                         return;
                     }
-                } else {
+                }
+                else
+                {
                     channel->setUserLimit(0);
                 }
                 break;
@@ -545,12 +555,8 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
         return;
         
     std::string cmd = tokens[0];
-    size_t i = 0;
-    while (i < cmd.size())
-    {
+    for (size_t i = 0; i < cmd.size(); i++)
         cmd[i] = std::toupper(cmd[i]);
-        i++;
-    }
     std::vector<std::string> params(tokens.begin() + 1, tokens.end());
                       
     switch (client->getState())
@@ -562,9 +568,7 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
                 client->setState(WAITING_FOR_NICK);
             }
             else
-            {
                 sendResponse(client, "451 :You have not registered - PASS required first");
-            }
             return;
             
         case WAITING_FOR_NICK:
@@ -574,9 +578,7 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
                 client->setState(WAITING_FOR_USER);
             }
             else
-            {
                 sendResponse(client, "451 :You have not registered - NICK required next");
-            }
             return;
             
         case WAITING_FOR_USER:
@@ -584,12 +586,10 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
             {
                 handleUser(client, params);
                 client->setState(REGISTERED);
-                sendResponse(client, RPL_WELCOME(user_id(client->getNickname(), client->getUsername()) , client->getNickname()));
+                sendResponse(client, RPL_WELCOME(user_id(client->getNickname(), client->getUsername()), client->getNickname()));
             }
             else
-            {
                 sendResponse(client, "451 :You have not registered - USER required next");
-            }
             return;
             
         case REGISTERED:
@@ -644,16 +644,14 @@ void parseAndDispatch(Server* server, Client* client, const std::string &message
                 pos = space;
             }
             if (tokens.empty())
-            {
                 sendResponse(client, "421 :Empty command received");
-            }
             else
             {
                 std::cout << "Commande détectée: " << tokens[0] << "\n";
                 dispatchCommand(server, client, tokens);
             }
         }
-        start = end + 2; // Passe "\r\n"
+        start = end + 2;
         end = message.find("\r\n", start);
     }
     
