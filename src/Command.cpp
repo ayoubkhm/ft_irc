@@ -281,7 +281,7 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
 {
     if (params.size() < 2)
     {
-        sendResponse(client, "461 INVITE :Not enough parameters");
+        sendResponse(client, ERR_NEEDMOREPARAMS(client->getNickname(), "INVITE"));
         return;
     }
     
@@ -307,13 +307,13 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
     }
     if (!channel)
     {
-        sendResponse(client, ":ft_irc 403 " + channelName + " :No such channel");
+        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
         return;
     }
     
     if (channel->isClientInChannel(targetFd))
     {
-        sendResponse(client, "443 " + params[1] + " " + channelName + " :is already on that channel");
+        sendResponse(client, ERR_USERONCHANNEL(client->getUsername(), client->getNickname(), channelName));
         return;
     }
     if (channel->isClientInvited(targetFd))
@@ -607,7 +607,7 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
             {
                 handleUser(client, params);
                 client->setState(REGISTERED);
-                sendResponse(client, "001 " + client->getNickname() + " :Bienvenue sur ft_irc");
+                sendResponse(client, RPL_WELCOME(user_id(client->getNickname(), client->getUsername()) , client->getNickname()));
             }
             else
             {
