@@ -5,7 +5,8 @@ Channel::Channel(const std::string& channelName, size_t maxClients)
 {
 }
 
-Channel::~Channel() {}
+Channel::~Channel() {
+}
 
 Channel::Channel(const Channel& other)
 : _name(other._name),
