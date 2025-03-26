@@ -5,6 +5,14 @@
 #include <map>
 #include <poll.h>
 #include <unistd.h>
+#include <iostream>
+#include <cstdlib>
+#include <cstring>
+#include <cerrno>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <fcntl.h>
 #include "Client.hpp"
 #include "Channel.hpp"
 

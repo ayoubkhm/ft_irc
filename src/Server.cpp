@@ -1,15 +1,7 @@
 #include "Server.hpp"
 #include "Command.hpp"
 #include "IRCUtils.hpp"
-#include <iostream>
-#include <cstdlib>
-#include <cstring>
-#include <cerrno>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <fcntl.h>
-#include <unistd.h>
+
 
 extern volatile bool g_running;
 

@@ -3,6 +3,7 @@
 #include <poll.h>
 #include <sys/socket.h>
 #include <string>
+#include <unistd.h> // pour close()
 
 enum ClientState {
     WAITING_FOR_PASS,

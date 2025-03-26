@@ -4,13 +4,7 @@
 #include "IRCUtils.hpp" // Déclare sendResponse(...)
 #include "Server.hpp"
 #include "RPL.hpp"
-#include <iostream>
-#include <vector>
-#include <cctype>
-#include <cstring>
-#include <cerrno>
-#include <unistd.h>
-#include <cstdlib>
+
 
 // Handler pour la commande CAP
 void handleCap(Client* client, const std::vector<std::string>& params)
@@ -24,7 +18,8 @@ void handlePing(Client* client, const std::vector<std::string>& params)
 {
     if (params.empty())
     {
-        sendResponse(client, "409 :No origin specified");
+        // pareil que PASS
+        //sendResponse(client, "409 :No origin specified");
         return;
     }
     sendResponse(client, RPL_PONG(user_id(client->getNickname(), client->getUsername()), params[0]));
@@ -41,7 +36,8 @@ bool handlePass(Client* client, const std::vector<std::string>& params)
     client->authenticate(params[0]);
     if (client->isAuthenticated()){
         // Vous pouvez définir une macro spécifique pour cette notification si besoin.
-        sendResponse(client, "NOTICE :Mot de passe accepté\r\n");
+        // il nexsite pas de RPL specifique, dapres GPT, je suis pour lenlever au risque de se faire niquer parce que on ne suit pas le protocol RPL et IRC
+        //sendResponse(client, "NOTICE :Mot de passe accepté\r\n");
         return true;
     }
     else {
@@ -179,7 +175,7 @@ void handlePrivmsg(Server* server, Client* client, const std::vector<std::string
         }
         std::string msg = RPL_PRIVMSG(client->getNickname(), client->getUsername(), target, message);
         server->broadcastToChannel(target, msg, client->getFd());
-        sendResponse(client, "NOTICE PRIVMSG :Message delivered to " + target + "\r\n");
+        //sendResponse(client, "NOTICE PRIVMSG :Message delivered to " + target + "\r\n");
     }
     // Message privé
     else if (!target.empty() && target[0] != '#' && target != client->getNickname())
@@ -198,7 +194,7 @@ void handlePrivmsg(Server* server, Client* client, const std::vector<std::string
         }
         std::string msg = RPL_PRIVMSG(client->getNickname(), client->getUsername(), target, message);
         sendResponse(targetClient, msg);
-        sendResponse(client, "NOTICE PRIVMSG :Message delivered to " + target + "\r\n");
+        //sendResponse(client, "NOTICE PRIVMSG :Message delivered to " + target + "\r\n");
     }
     else
     {
@@ -263,7 +259,7 @@ void handleKick(Server* server, Client* client, const std::vector<std::string>& 
     }
     
     // Notifier le client ciblé qu'il va être kické
-    sendResponse(targetClient, ":localhost NOTICE KICK :You have been kicked from " + channelName + "\r\n");
+    //sendResponse(targetClient, ":localhost NOTICE KICK :You have been kicked from " + channelName + "\r\n");
     
     // Construire le message KICK en utilisant la macro RPL_KICK
     std::string kickMsg = RPL_KICK(user_id(client->getNickname(), client->getUsername()),
@@ -360,9 +356,6 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
                                       client->getNickname(), invitedClient->getNickname(), channelName));
 }
 
-
-
-
 void handlePart(Server* server, Client* client, const std::vector<std::string>& params)
 {
     if (params.empty())
@@ -393,7 +386,6 @@ void handlePart(Server* server, Client* client, const std::vector<std::string>& 
     std::string partMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost PART " + channelName + "\r\n";
     server->broadcastToChannel(channelName, partMsg, client->getFd());
 }
-
 
 // Handler pour la commande TOPIC
 void handleTopic(Server* server, Client* client, const std::vector<std::string>& params)
@@ -444,7 +436,6 @@ void handleTopic(Server* server, Client* client, const std::vector<std::string>&
                            "@localhost TOPIC " + channelName + " :" + new_topic + "\r\n";
     server->broadcastToChannel(channelName, topicMsg, -1);
 }
-
 
 // Handler pour la commande MODE (dummy)
 void handleMode(Server* server, Client* client, const std::vector<std::string>& params)

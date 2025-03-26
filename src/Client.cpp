@@ -1,5 +1,4 @@
 #include "Client.hpp"
-#include <unistd.h> // pour close()
 
 // Initialisation du compteur statique
 unsigned int Client::s_nextId = 1; // On peut démarrer à 1 par exemple
