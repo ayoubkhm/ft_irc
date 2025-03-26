@@ -6,30 +6,40 @@ void	sendServerRpl(int const client_fd, std::string client_buffer);
 # define user_id(nickname, username) (":" + nickname + "!" + username + "@localhost")
 
 # define RPL_WELCOME(user_id, nickname) (":localhost 001 " + nickname + " :Welcome to the Internet Relay Network " + user_id + "\r\n") /************OK************/
-# define RPL_YOURHOST(client, servername, version) (":localhost 002 " + client + " :Your host is " + servername + " (localhost), running version " + version + "\r\n")
-# define RPL_CREATED(client, datetime) (":localhost 003 " + client + " :This server was created " + datetime + "\r\n")
-# define RPL_MYINFO(client, servername, version, user_modes, chan_modes, chan_param_modes) (":localhost 004 " + client + " " + servername + " " + version + " " + user_modes + " " + chan_modes + " " + chan_param_modes + "\r\n")
-# define RPL_ISUPPORT(client, tokens) (":localhost 005 " + client + " " + tokens " :are supported by this server\r\n")
+//# define RPL_YOURHOST(client, servername, version) (":localhost 002 " + client + " :Your host is " + servername + " (localhost), running version " + version + "\r\n")
+//# define RPL_CREATED(client, datetime) (":localhost 003 " + client + " :This server was created " + datetime + "\r\n")
+//# define RPL_MYINFO(client, servername, version, user_modes, chan_modes, chan_param_modes) (":localhost 004 " + client + " " + servername + " " + version + " " + user_modes + " " + chan_modes + " " + chan_param_modes + "\r\n")
+//# define RPL_ISUPPORT(client, tokens) (":localhost 005 " + client + " " + tokens " :are supported by this server\r\n")
 
 # define ERR_UNKNOWNCOMMAND(client, command) (":localhost 421 " + client + " " + command + " :Unknown command\r\n")
+# define ERR_NOTREGISTERED(client) (":localhost 451 " + client + " :You have not registered\r\n")
+
 
 // INVITE
-# define ERR_NEEDMOREPARAMS(client, command) (":localhost 461 " + client + " " + command + " :Not enough parameters.\r\n") /************OK************/
-# define ERR_NOSUCHCHANNEL(client, channel) (":localhost 403 " + client + " #" + channel + " :No such channel\r\n") /************OK************/
-# define ERR_NOTONCHANNEL(client, channel) (":localhost 442 " + client + " #" + channel + " :The user is not on this channel.\r\n")
-# define ERR_USERONCHANNEL(client, nick, channel) (":localhost 443 " + client + " " + nick + " #" + channel + " :Is already on channel\r\n") /************OK************/
-# define RPL_INVITING(user_id, client, nick, channel) (user_id + " 341 " + client + " " + nick + " #" + channel + "\r\n")
+# define ERR_NEEDMOREPARAMS(client, command) (":localhost 461 " + client + " " + command + " :Not enough parameters.\r\n")
+# define ERR_NOSUCHCHANNEL(client, channel) (":localhost 403 " + client + " #" + channel + " :No such channel\r\n")
+# define ERR_NOSUCHNICK(client, target) ("401 " + client + " " + target + " :No such nick/channel\r\n")
+# define ERR_ALREADYINVITED(client, channel) (":localhost 443 " + client + " #" + channel + " :is already invited\r\n")
+# define ERR_INVITEYOURSELF(client) (":localhost 502 " + client + " :Cannot invite yourself\r\n")
+# define ERR_USERONCHANNEL(client, nick, channel) (":localhost 443 " + client + " " + nick + " #" + channel + " :Is already on channel\r\n")
 # define RPL_INVITE(user_id, invited, channel) (user_id + " INVITE " + invited + " #" + channel + "\r\n")
+# define RPL_INVITING(user_id, client, nick, channel) (user_id + " 341 " + client + " " + nick + " #" + channel + "\r\n")
+
 
 // JOIN
 # define RPL_JOIN(user_id, channel) (user_id + " JOIN :#" +  channel + "\r\n")
-# define ERR_BANNEDFROMCHAN(client, channel) ("474 " + client + " #" + channel + " :Cannot join channel (+b)\r\n")
+//# define ERR_BANNEDFROMCHAN(client, channel) ("474 " + client + " #" + channel + " :Cannot join channel (+b)\r\n")
 # define ERR_BADCHANNELKEY(client, channel) ("475 " + client + " #" + channel + " :Cannot join channel (+k)\r\n")
+# define ERR_ALREADYJOINED(client, channel) (":localhost 443 " + client + " #" + channel + " :Is already on channel\r\n")
+# define ERR_INVITEONLY(client, channel) (":localhost 473 " + client + " #" + channel + " :Cannot join channel (+i)\r\n")
+
 
 // KICK
 # define ERR_USERNOTINCHANNEL(client, nickname, channel) ("441 " + client + " " + nickname + " #" + channel + " :They aren't on that channel\r\n")
 // # define ERR_CHANOPRIVSNEEDED(client, channel) ("482 " + client + " #" +  channel + " :You're not channel operator\r\n")
 # define RPL_KICK(user_id, channel, kicked, reason) (user_id + " KICK #" + channel + " " + kicked + " " + reason + "\r\n")
+# define ERR_CANNOTKICKSELF(client) ("502 " + client + " :Cannot kick yourself\r\n")
+
 
 // KILL
 # define ERR_NOPRIVILEGES(client) ("481 " + client + " :Permission Denied- You're not an IRC operator\r\n")
@@ -41,6 +51,8 @@ void	sendServerRpl(int const client_fd, std::string client_buffer);
 #define ERR_UMODEUNKNOWNFLAG(client) (":localhost 501 " + client + " :Unknown MODE flag\r\n")
 #define ERR_USERSDONTMATCH(client) ("502 " + client + " :Cant change mode for other users\r\n")
 #define RPL_UMODEIS(client, mode) (":localhost 221 " + client + " " + mode + "\r\n")
+#define ERR_CANNOTREMOVEOP(client, channel) (":localhost 461 " + client + " #" + channel + " :Operator can't be removed\r\n")
+
 /* channel mode */
 #define MODE_CHANNELMSG(channel, mode) (":localhost MODE #" + channel + " " + mode + "\r\n")
 #define MODE_CHANNELMSGWITHPARAM(channel, mode, param) (":localhost MODE #" + channel + " " + mode + " " + param + "\r\n")
@@ -81,7 +93,10 @@ void	sendServerRpl(int const client_fd, std::string client_buffer);
 # define RPL_YOUREOPER(client) ("381 " + client + " :You are now an IRC operator\r\n")
 
 // PART
-# define RPL_PART(user_id, channel, reason) (user_id + " PART #" + channel + " " + (reason.empty() ? "." : reason ) + "\r\n")
+# define RPL_PART(user_id, channel, reason) (std::string(user_id) + " PART #" + channel + " " + (std::string(reason).empty() ? "." : std::string(reason)) + "\r\n")
+# define ERR_NOSUCHCHANNEL(client, channel) (":localhost 403 " + client + " #" + channel + " :No such channel\r\n")
+# define ERR_NOTONCHANNEL(client, channel) (":localhost 442 " + client + " #" + channel + " :You're not on that channel\r\n")
+
 
 // PASS
 # define ERR_PASSWDMISMATCH(client) (":localhost 464 " + client + " :Password incorrect.\r\n")
