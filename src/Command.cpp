@@ -92,7 +92,7 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
     // Vérification du nom de channel
     if (channelName.empty() || channelName[0] != '#')
     {
-        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
+        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName.substr(0)));
         return;
     }
     
@@ -102,25 +102,25 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
         // Utilisation de l'ID unique pour les vérifications
         if (channel->isClientInChannel(client->getId()))
         {
-            sendResponse(client, ERR_ALREADYJOINED(client->getNickname(), channelName));
+            sendResponse(client, ERR_ALREADYJOINED(client->getNickname(), channelName.substr(0)));
             return;
         }
         if (channel->getInviteOnly() && !channel->isClientInvited(client->getId()))
         {
-            sendResponse(client, ERR_INVITEONLY(client->getNickname(), channelName));
+            sendResponse(client, ERR_INVITEONLY(client->getNickname(), channelName.substr(0)));
             return;
         }
         if (!channel->getKey().empty())
         {
             if (params.size() < 2)
             {
-                sendResponse(client, ERR_BADCHANNELKEY(client->getNickname(), channelName));
+                sendResponse(client, ERR_BADCHANNELKEY(client->getNickname(), channelName.substr(0)));
                 return;
             }
             std::string mdp = params[1];
             if (channel->getKey() != mdp)
             {
-                sendResponse(client, ERR_BADCHANNELKEY(client->getNickname(), channelName));
+                sendResponse(client, ERR_BADCHANNELKEY(client->getNickname(), channelName.substr(0)));
                 return;
             }
         }
@@ -131,13 +131,14 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
     if (channel && channel->isClientInChannel(client->getId()))
     {
         channel->removeInvitedClient(client->getId());
-        std::string joinMsg = RPL_JOIN(user_id(client->getNickname(), client->getUsername()), channelName);
+        std::string joinMsg = RPL_JOIN(user_id(client->getNickname(), client->getUsername()), channelName.substr(0));
         server->broadcastToChannel(channelName, joinMsg, -1);
-        sendResponse(client, RPL_JOIN(user_id(client->getNickname(), client->getUsername()), channelName));
+        // doublon
+        //sendResponse(client, RPL_JOIN(user_id(client->getNickname(), client->getUsername()), channelName));
     }
     else
     {
-        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
+        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName.substr(0)));
     }
 }
 
@@ -214,7 +215,7 @@ void handleKick(Server* server, Client* client, const std::vector<std::string>& 
     std::string channelName = params[0];
     if (channelName.empty() || channelName[0] != '#')
     {
-        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
+        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName.substr(0)));
         return;
     }
     
@@ -242,19 +243,19 @@ void handleKick(Server* server, Client* client, const std::vector<std::string>& 
     Channel* channel = server->getChannelByName(channelName);
     if (!channel)
     {
-        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
+        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName.substr(0)));
         return;
     }
     
     if (!channel->isClientInChannel(targetClient->getId()))
     {
-        sendResponse(client, ERR_USERNOTINCHANNEL(client->getNickname(), params[1], channelName));
+        sendResponse(client, ERR_USERNOTINCHANNEL(client->getNickname(), params[1], channelName.substr(0)));
         return;
     }
     
     if (!channel->isOperator(client->getId()))
     {
-        sendResponse(client, ERR_CHANOPRIVSNEEDED(client->getNickname(), channelName));
+        sendResponse(client, ERR_CHANOPRIVSNEEDED(client->getNickname(), channelName.substr(0)));
         return;
     }
     
@@ -286,7 +287,7 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
     std::string channelName = params[0];
     if (channelName.empty() || channelName[0] != '#')
     {
-        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
+        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName.substr(0)));
         return;
     }
     
@@ -306,7 +307,7 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
     Channel* channel = server->getChannelByName(channelName);
     if (!channel)
     {
-        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
+        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName.substr(0)));
         return;
     }
     
@@ -319,12 +320,12 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
     
     if (channel->isClientInChannel(invitedClient->getId()))
     {
-        sendResponse(client, ERR_USERONCHANNEL(client->getUsername(), client->getNickname(), channelName));
+        sendResponse(client, ERR_USERONCHANNEL(client->getUsername(), client->getNickname(), channelName.substr(0)));
         return;
     }
     if (channel->isClientInvited(invitedClient->getId()))
     {
-        sendResponse(client, ERR_ALREADYINVITED(client->getNickname(), channelName));
+        sendResponse(client, ERR_ALREADYINVITED(client->getNickname(), channelName.substr(0)));
         return;
     }
     
@@ -353,7 +354,7 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
     
     // Notifier l'émetteur que l'invitation a été effectuée via la macro RPL_INVITING
     sendResponse(client, RPL_INVITING(user_id(client->getNickname(), client->getUsername()),
-                                      client->getNickname(), invitedClient->getNickname(), channelName));
+                                      client->getNickname(), invitedClient->getNickname(), channelName.substr(0)));
 }
 
 void handlePart(Server* server, Client* client, const std::vector<std::string>& params)
@@ -366,23 +367,23 @@ void handlePart(Server* server, Client* client, const std::vector<std::string>& 
     std::string channelName = params[0];
     if (channelName.empty() || channelName[0] != '#')
     {
-        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
+        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName.substr(0)));
         return;
     }
     
     Channel* channel = server->getChannelByName(channelName);
     if (!channel)
     {
-        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
+        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName.substr(0)));
         return;
     }
     if (!channel->isClientInChannel(client->getId()))
     {
-        sendResponse(client, ERR_NOTONCHANNEL(client->getNickname(), channelName));
+        sendResponse(client, ERR_NOTONCHANNEL(client->getNickname(), channelName.substr(0)));
         return;
     }
     channel->removeClient(client->getId());
-    sendResponse(client, RPL_PART(user_id(client->getNickname(), client->getUsername()), channelName, "You have left the channel"));
+    sendResponse(client, RPL_PART(user_id(client->getNickname(), client->getUsername()), channelName.substr(0), "You have left the channel"));
     std::string partMsg = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost PART " + channelName + "\r\n";
     server->broadcastToChannel(channelName, partMsg, client->getFd());
 }
@@ -399,14 +400,14 @@ void handleTopic(Server* server, Client* client, const std::vector<std::string>&
     std::string channelName = params[0];
     if (channelName.empty() || channelName[0] != '#')
     {
-        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
+        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName.substr(0)));
         return;
     }
 
     Channel* channel = server->getChannelByName(channelName);
     if (!channel)
     {
-        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
+        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName.substr(0)));
         return;
     }
 
@@ -415,7 +416,7 @@ void handleTopic(Server* server, Client* client, const std::vector<std::string>&
     {
         std::string current_topic = channel->getTopic();
         if (current_topic.empty())
-            sendResponse(client, RPL_NOTOPIC(client->getNickname(), channelName));
+            sendResponse(client, RPL_NOTOPIC(client->getNickname(), channelName.substr(0)));
         else
             sendResponse(client, RPL_TOPIC(client->getNickname(), channelName, current_topic));
         return;
@@ -456,7 +457,7 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
         // Si le channelName n'est pas un channel (commence par '#')
         if (channelName[0] != '#')
         {
-            sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
+            sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName.substr(0)));
             return;
         }
     }
@@ -469,13 +470,13 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
     Channel* channel = server->getChannelByName(channelName);
     if (!channel)
     {
-        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
+        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName.substr(0)));
         return;
     }
     // Vérification des privilèges d'opérateur via l'ID unique
     if (!channel->isOperator(client->getId()))
     {
-        sendResponse(client, ERR_CHANOPRIVSNEEDED(client->getNickname(), channelName));
+        sendResponse(client, ERR_CHANOPRIVSNEEDED(client->getNickname(), channelName.substr(0)));
         return;
     }
     
@@ -533,7 +534,7 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
                                 channel->removeOperator(target->getId());
                             else
                             {
-                                sendResponse(client, ERR_CANNOTREMOVEOP(client->getNickname(), channelName));
+                                sendResponse(client, ERR_CANNOTREMOVEOP(client->getNickname(), channelName.substr(0)));
                                 return;
                             }
                         }
