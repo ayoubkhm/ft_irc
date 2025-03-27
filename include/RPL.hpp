@@ -23,7 +23,7 @@ void	sendServerRpl(int const client_fd, std::string client_buffer);
 # define ERR_INVITEYOURSELF(client) (":localhost 502 " + client + " :Cannot invite yourself\r\n")
 # define ERR_USERONCHANNEL(client, nick, channel) (":localhost 443 " + client + " " + nick + " " + channel + " :Is already on channel\r\n")
 # define RPL_INVITE(user_id, invited, channel) (user_id + " INVITE " + invited + " " + channel + "\r\n")
-# define RPL_INVITING(user_id, client, nick, channel) (user_id + " 341 " + client + " " + nick + " " + channel + "\r\n")
+# define RPL_INVITING(client, target, channel) ("localhost 341 " + client + " " + target + " " + channel + "\r\n")
 
 
 // JOIN
