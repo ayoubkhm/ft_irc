@@ -464,7 +464,12 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
     if (!channelName.empty())
     {
         // Si le channelName n'est pas un channel (commence par '#')
-        if (channelName[0] != '#')
+        if (channelName.compare(client->getNickname().c_str()) == 0)
+        {
+            return;
+        }
+        // Si le channelName n'est pas un channel (commence par '#')
+        else if (channelName[0] != '#')
         {
             sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
             return;
