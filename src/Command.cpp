@@ -63,7 +63,7 @@ bool handleNick(Server* server, Client* client, const std::vector<std::string>& 
     }
     if (nickName[0] == '#')
     {
-        sendResponse(client, "Invalid nickname (starts with #)");
+        sendResponse(client, ERR_ERRONEUSNICKNAME(client->getNickname(), nickName));
         return false;
     }
     client->setNickname(nickName);
@@ -82,7 +82,7 @@ bool handleUser(Client* client, const std::vector<std::string>& params)
     std::string userName    = params[0];
     if (userName[0] == '#')
     {
-        sendResponse(client, "Invalid username (starts with #)");
+        sendResponse(client, ERR_ERRONEUSNICKNAME(client->getUsername(), userName));
         return (false);
     }
     std::string hostName    = params[1];
