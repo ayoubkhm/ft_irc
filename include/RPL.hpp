@@ -23,7 +23,7 @@ void	sendServerRpl(int const client_fd, std::string client_buffer);
 # define ERR_INVITEYOURSELF(client) (":localhost 502 " + client + " :Cannot invite yourself\r\n")
 # define ERR_USERONCHANNEL(client, nick, channel) (":localhost 443 " + client + " " + nick + " " + channel + " :Is already on channel\r\n")
 # define RPL_INVITE(user_id, invited, channel) (user_id + " INVITE " + invited + " " + channel + "\r\n")
-# define RPL_INVITING(client, target, channel) ("localhost 341 " + client + " " + target + " " + channel + "\r\n")
+# define RPL_INVITING(client, target, channel) ("localhost 341 " + client + " inviting " + target + " " + channel + "\r\n")
 
 
 // JOIN
@@ -42,8 +42,8 @@ void	sendServerRpl(int const client_fd, std::string client_buffer);
 
 
 // KILL
-# define ERR_NOPRIVILEGES(client) ("481 " + client + " :Permission Denied- You're not an IRC operator\r\n")
-# define RPL_KILL(user_id, killed, comment) (user_id + " KILL " + killed + " " + comment + "\r\n")
+/* # define ERR_NOPRIVILEGES(client) ("481 " + client + " :Permission Denied- You're not an IRC operator\r\n")
+# define RPL_KILL(user_id, killed, comment) (user_id + " KILL " + killed + " " + comment + "\r\n") */
 
 // MODE
 /* user mode */
@@ -67,7 +67,7 @@ void	sendServerRpl(int const client_fd, std::string client_buffer);
       // :lair.nl.eu.dal.net 404 tiff #pop :Cannot send to channel
 #define RPL_ADDVOICE(nickname, username, channel, mode, param) (":" + nickname + "!" + username + "@localhost MODE " + channel + " " + mode + " " + param + "\r\n")
 
-// MOTD
+/* // MOTD
 #define ERR_NOSUCHSERVER(client, servername) (":localhost 402 " + client + " " + servername + " :No such server\r\n")
 #define ERR_NOMOTD(client) (":localhost 422 " + client + " :MOTD File is missing\r\n")
 #define RPL_MOTDSTART(client, servername) (":localhost 375 " + client + " :- " + servername + " Message of the day - \r\n")
@@ -77,7 +77,7 @@ void	sendServerRpl(int const client_fd, std::string client_buffer);
 
 // NAMES
 # define RPL_NAMREPLY(client, symbol, channel, list_of_nicks) (":localhost 353 " + client + " " + symbol + " " + channel + " :" + list_of_nicks + "\r\n")
-# define RPL_ENDOFNAMES(client, channel) (":localhost 366 " + client + " " + channel + " :End of /NAMES list.\r\n")
+# define RPL_ENDOFNAMES(client, channel) (":localhost 366 " + client + " " + channel + " :End of /NAMES list.\r\n") */
 
 // NICK
 # define ERR_NONICKNAMEGIVEN(client) (":localhost 431 " + client + " :There is no nickname.\r\n")
@@ -86,11 +86,11 @@ void	sendServerRpl(int const client_fd, std::string client_buffer);
 # define RPL_NICK(oclient, uclient, client) (":" + oclient + "!" + uclient + "@localhost NICK " +  client + "\r\n")
 
 // NOTICE
-# define RPL_NOTICE(nick, username, target, message) (":" + nick + "!" + username + "@localhost NOTICE " + target + " " + message + "\r\n")
+/* # define RPL_NOTICE(nick, username, target, message) (":" + nick + "!" + username + "@localhost NOTICE " + target + " " + message + "\r\n") */
 
 // OPER
-# define ERR_NOOPERHOST(client) ("491 " + client + " :No O-lines for your host\r\n")
-# define RPL_YOUREOPER(client) ("381 " + client + " :You are now an IRC operator\r\n")
+/* # define ERR_NOOPERHOST(client) ("491 " + client + " :No O-lines for your host\r\n")
+# define RPL_YOUREOPER(client) ("381 " + client + " :You are now an IRC operator\r\n") */
 
 // PART
 # define RPL_PART(user_id, channel, reason) (std::string(user_id) + " PART " + channel + " " + (std::string(reason).empty() ? "." : std::string(reason)) + "\r\n")
@@ -105,8 +105,8 @@ void	sendServerRpl(int const client_fd, std::string client_buffer);
 # define RPL_PONG(user_id, token) (user_id + " PONG " + token + "\r\n")
 
 // QUIT
-# define RPL_QUIT(user_id, reason) (user_id + " QUIT :Quit: " + reason + "\r\n")
-# define RPL_ERROR(user_id, reason) (user_id + " ERROR :" + reason + "\r\n")
+/* # define RPL_QUIT(user_id, reason) (user_id + " QUIT :Quit: " + reason + "\r\n")
+# define RPL_ERROR(user_id, reason) (user_id + " ERROR :" + reason + "\r\n") */
 
 // PRIVMSG
 # define ERR_NOSUCHNICK(client, target) ("401 " + client + " " + target + " :No such nick/channel\r\n")
