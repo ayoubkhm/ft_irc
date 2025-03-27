@@ -19,7 +19,7 @@ void	sendServerRpl(int const client_fd, std::string client_buffer);
 # define ERR_NEEDMOREPARAMS(client, command) (":localhost 461 " + client + " " + command + " :Not enough parameters.\r")
 # define ERR_NOSUCHCHANNEL(client, channel) (":localhost 403 " + client + " " + channel + " :No such channel\r")
 # define ERR_NOSUCHNICK(client, target) ("localhost 401 " + client + " " + target + " :No such nick/channel\r")
-# define ERR_ALREADYINVITED(client, channel) (":localhost 443 " + client + " " + channel + " :is already invited\r")
+# define ERR_ALREADYINVITED(client, target, channel) (":localhost 443 " + client + " " + target + " " + channel + " :is already invited\r")
 # define ERR_INVITEYOURSELF(client) (":localhost 502 " + client + " :Cannot invite yourself\r")
 # define ERR_USERONCHANNEL(client, nick, channel) (":localhost 443 " + client + " " + nick + " " + channel + " :Is already on channel\r")
 # define RPL_INVITE(user_id, invited, channel) (user_id + " INVITE " + invited + " " + channel + "\r")

@@ -333,12 +333,12 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
     
     if (channel->isClientInChannel(invitedClient->getId()))
     {
-        sendResponse(client, ERR_USERONCHANNEL(client->getUsername(), client->getNickname(), channelName));
+        sendResponse(client, ERR_USERONCHANNEL(client->getUsername(), params[1], channelName));
         return;
     }
     if (channel->isClientInvited(invitedClient->getId()))
     {
-        sendResponse(client, ERR_ALREADYINVITED(client->getNickname(), channelName));
+        sendResponse(client, ERR_ALREADYINVITED(client->getNickname(), params[1], channelName));
         return;
     }
     
