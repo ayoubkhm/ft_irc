@@ -24,12 +24,12 @@ private:
     int _userLimit;
 
 public:
-    Channel(const std::string& channelName, size_t maxClients = 50);
+    Channel(const std::string& channelName, size_t maxClients = 1024);
     ~Channel();
     Channel(Channel const& copy);
     Channel &operator=(Channel const& copy);
 
-    void addClient(unsigned int clientId);
+    bool addClient(unsigned int clientId);
     void addInvitedClient(unsigned int clientId);
     void removeInvitedClient(unsigned int clientId);
     void removeClient(unsigned int clientId);
@@ -57,5 +57,4 @@ public:
     const std::string& getKey() const;
 
     void setUserLimit(int limit);
-    int getUserLimit() const;
 };

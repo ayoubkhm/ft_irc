@@ -145,7 +145,13 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
     }
     else
     {
-        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
+        if (channel->getMaxClients() < channel->getClientCount() + 1)
+        {
+            sendResponse(client, ERR_CHANNELISFULL(client->getNickname(), channelName));
+            return;
+        }
+        else
+            sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
     }
 }
 
@@ -559,13 +565,13 @@ void handleMode(Server* server, Client* client, const std::vector<std::string>& 
                     }
                     else
                     {
-                        sendResponse(client, ERR_NEEDMOREPARAMS(client->getNickname(), "MODE +l"));
+                        sendResponse(client, ERR_CHANNELISFULL(client->getNickname(), channelName));
                         return;
                     }
                 }
                 else
                 {
-                    channel->setUserLimit(0);
+                    channel->setUserLimit(1024);
                 }
                 break;
             default:

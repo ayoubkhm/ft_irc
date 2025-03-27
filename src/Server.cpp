@@ -271,8 +271,8 @@ void Server::joinChannel(int fd, const std::string& channelName)
     Channel& channel = it->second;
     if (!channel.isClientInChannel(clientId))
     {
-        channel.addClient(clientId);
-        std::cout << "Le client avec ID " << clientId << " a rejoint le channel " << channelName << ".\n";
+        if (channel.addClient(clientId) == true)
+            std::cout << "Le client avec ID " << clientId << " a rejoint le channel " << channelName << ".\n";
     }
     
     // Si le channel vient d'être créé, le rendre opérateur
