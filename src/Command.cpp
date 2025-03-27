@@ -70,16 +70,19 @@ bool handleNick(Server* server, Client* client, const std::vector<std::string>& 
 // Handler pour la commande USER
 bool handleUser(Client* client, const std::vector<std::string>& params)
 {
-    if (params.size() < 1)
+    if (params.size() < 4)
     {
         sendResponse(client, ERR_NEEDMOREPARAMS(client->getNickname(), "USER"));
         return false;
     }
-    std::string userName = params[0];
+    std::string userName    = params[0];
+    std::string hostName    = params[1];
+    std::string serverName  = params[2];
+    std::string realName    = params[3];
     client->setUsername(userName);
-    
     return true;
 }
+
 
 
 // Handler pour la commande JOIN
