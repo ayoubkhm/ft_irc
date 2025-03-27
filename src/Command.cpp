@@ -353,8 +353,7 @@ void handleInvite(Server* server, Client* client, const std::vector<std::string>
               << " a été invité avec succès à " << channelName << std::endl;
     
     // Notifier l'émetteur que l'invitation a été effectuée via la macro RPL_INVITING
-    sendResponse(client, RPL_INVITING(user_id(client->getNickname(), client->getUsername()),
-                                      client->getNickname(), invitedClient->getNickname(), channelName));
+    sendResponse(client, RPL_INVITING(client->getNickname(), invitedClient->getNickname(), channelName));
 }
 
 void handlePart(Server* server, Client* client, const std::vector<std::string>& params)
