@@ -5,10 +5,11 @@
 
 extern volatile bool g_running;
 
-Server::Server(int port, const std::string &password)
+Server::Server(int port, const std::string &password, struct tm *timeinfo)
     : server_fd(-1), port(port), password(password)
 {
     initServer();
+    this->setDatetime(timeinfo);
 }
 
 Server::~Server()
@@ -93,7 +94,6 @@ void Server::initServer()
     }
     
     std::cout << "Serveur initialisé sur le port " << port << " avec le mot de passe '" << password << "'\n";
-    
     struct pollfd pfd;
     pfd.fd = server_fd;
     pfd.events = POLLIN;
@@ -319,6 +319,21 @@ void Server::kickClient(int fd, const std::string& channelName, int targetFd)
     }
     channel.removeClient(targetId);
     std::cout << "Le client avec ID " << targetId << " a été expulsé du channel " << channelName << ".\n";
+}
+
+std::string Server::getDateTime () const
+{
+    return (_datetime);
+}
+
+void Server::setDatetime(struct tm *timeinfo)
+{
+	char buffer[80];
+
+	strftime(buffer,sizeof(buffer),"%d-%m-%Y %H:%M:%S",timeinfo);
+  	std::string str(buffer);
+
+	_datetime = str;
 }
 
 int Server::getFdByNickname(const std::string &nickname)

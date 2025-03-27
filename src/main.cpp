@@ -22,6 +22,12 @@ int main(int argc, char **argv)
         std::cerr << "Usage: " << argv[0] << " <port> <password>\n";
         return 1;
     }
+
+    time_t rawtime;
+	struct tm * timeinfo;
+
+	time (&rawtime);
+	timeinfo = localtime(&rawtime);
     
     // Installation du handler pour SIGINT et SIGTERM
     struct sigaction sa;
@@ -41,7 +47,7 @@ int main(int argc, char **argv)
     std::string password = argv[2];
     
     // Création et lancement du serveur
-    Server server(port, password);
+    Server server(port, password, timeinfo);
     try
     {
         server.run();
