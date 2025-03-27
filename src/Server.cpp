@@ -279,7 +279,7 @@ void Server::joinChannel(int fd, const std::string& channelName)
     if (newlyCreated)
     {
         channel.addOperator(clientId);
-        sendResponse(client, "NOTICE * :Vous êtes le créateur du channel " + channelName + " et vous êtes opérateur.");
+        //sendResponse(client, "NOTICE * :Vous êtes le créateur du channel " + channelName + " et vous êtes opérateur.");
     }
 }
 

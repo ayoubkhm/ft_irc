@@ -83,13 +83,14 @@ bool handleUser(Client* client, const std::vector<std::string>& params)
 void handleJoin(Server* server, Client* client, const std::vector<std::string>& params)
 {
     // Vérification du nombre de paramètres
-    if (params.empty())
+    if (params.empty() || (params[0].size() == 1 && params[0][0] == '#'))
     {
         sendResponse(client, ERR_NEEDMOREPARAMS(client->getNickname(), "JOIN"));
         return;
     }
     std::string channelName = params[0];
     // Vérification du nom de channel
+    
     if (channelName.empty() || channelName[0] != '#')
     {
         sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), "#" + channelName));
