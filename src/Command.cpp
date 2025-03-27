@@ -90,13 +90,16 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
     }
     std::string channelName = params[0];
     // Vérification du nom de channel
-    
     if (channelName.empty() || channelName[0] != '#')
     {
         sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), "#" + channelName));
         return;
     }
-    
+    if (channelName.find(','))
+    {
+        sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
+        return;
+    }
     Channel* channel = server->getChannelByName(channelName);
     if (channel)
     {
