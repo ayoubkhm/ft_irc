@@ -263,10 +263,7 @@ void handleKick(Server* server, Client* client, const std::vector<std::string>& 
     //sendResponse(targetClient, ":localhost NOTICE KICK :You have been kicked from " + channelName + "\r\n");
     
     // Construire le message KICK en utilisant la macro RPL_KICK
-    std::string kickMsg = RPL_KICK(user_id(client->getNickname(), client->getUsername()),
-                                   channelName,
-                                   params[1],
-                                   "Kicked by " + client->getNickname());
+    std::string kickMsg = RPL_KICK(channelName, params[1], "Kicked by " + client->getNickname());
     server->broadcastToChannel(channelName, kickMsg, -1);
     
     // Retirer le client du channel via son ID
