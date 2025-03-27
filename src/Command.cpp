@@ -61,7 +61,8 @@ bool handleNick(Server* server, Client* client, const std::vector<std::string>& 
         sendResponse(client, ERR_NICKNAMEINUSE(client->getNickname(), nickName));
         return false;
     }
-    client->setNickname(const_cast<std::string&>(params[0]));
+    
+    client->setNickname(nickName);
     return true;
 }
 
@@ -74,7 +75,9 @@ bool handleUser(Client* client, const std::vector<std::string>& params)
         sendResponse(client, ERR_NEEDMOREPARAMS(client->getNickname(), "USER"));
         return false;
     }
-    client->setUsername(const_cast<std::string&>(params[0]));
+    std::string userName = params[0];
+    client->setUsername(userName);
+    
     return true;
 }
 
