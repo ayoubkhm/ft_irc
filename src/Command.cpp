@@ -98,7 +98,7 @@ void handleJoin(Server* server, Client* client, const std::vector<std::string>& 
         sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), "#" + channelName));
         return;
     }
-    if (channelName.find(','))
+    if (channelName.find(',')!=std::string::npos)
     {
         sendResponse(client, ERR_NOSUCHCHANNEL(client->getNickname(), channelName));
         return;
