@@ -44,14 +44,15 @@ Channel& Channel::operator=(const Channel& other) {
     return *this;
 }
 
-void Channel::addClient(unsigned int clientId)
+bool Channel::addClient(unsigned int clientId)
 {
     if (_clients.size() >= _maxClients)
     {
         std::cerr << "Le channel " << _name << " est plein !" << std::endl;
-        return;
+        return false;
     }
     _clients.insert(clientId);
+    return true;
 }
 
 void Channel::addInvitedClient(unsigned int clientId)
@@ -112,11 +113,6 @@ const std::string& Channel::getTopic() const
     return _topic;
 }
 
-size_t Channel::getMaxClients() const
-{
-    return _maxClients;
-}
-
 void Channel::printClients() const
 {
     std::cout << "Clients dans le channel " << _name << " :" << std::endl;
@@ -161,9 +157,9 @@ const std::string& Channel::getKey() const {
 }
 
 void Channel::setUserLimit(int limit) {
-    _userLimit = limit;
+    _maxClients = limit;
 }
 
-int Channel::getUserLimit() const {
-    return _userLimit;
+size_t Channel::getMaxClients() const {
+    return _maxClients;
 }
