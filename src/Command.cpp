@@ -615,6 +615,9 @@ void dispatchCommand(Server* server, Client* client, const std::vector<std::stri
                 {
                     client->setState(REGISTERED);
                     sendResponse(client, RPL_WELCOME(user_id(client->getNickname(), client->getUsername()), client->getNickname()));
+                    sendResponse(client, RPL_YOURHOST(client->getNickname(), "localhost" ,"1.1"));
+                    sendResponse(client, RPL_CREATED(client->getNickname(), server->getDateTime()));
+                    sendResponse(client, RPL_MYINFO(client->getNickname(), "localhost", "1.1", "io", "kost", "k"));
                 }
             }
             else
