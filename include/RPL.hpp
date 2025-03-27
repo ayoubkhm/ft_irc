@@ -37,7 +37,7 @@ void	sendServerRpl(int const client_fd, std::string client_buffer);
 // KICK
 # define ERR_USERNOTINCHANNEL(client, nickname, channel) ("441 " + client + " " + nickname + " " + channel + " :They aren't on that channel\r\n")
 // # define ERR_CHANOPRIVSNEEDED(client, channel) ("482 " + client + " #" +  channel + " :You're not channel operator\r\n")
-# define RPL_KICK(user_id, channel, kicked, reason) (user_id + " KICK " + channel + " " + kicked + " " + reason + "\r\n")
+# define RPL_KICK(channel, kicked, reason) ("localhost KICK " + channel + " " + kicked + " " + reason + "\r\n")
 # define ERR_CANNOTKICKSELF(client) ("502 " + client + " :Cannot kick yourself\r\n")
 
 
