@@ -17,13 +17,14 @@ private:
     int _fd;
     unsigned int _id;            // Nouvel identifiant unique pour le client
     int _port;
+    bool _authenticated;
+    bool _welcomeSent;
     std::string _Nickname;
     std::string _Username;
     std::string _Host;
-    bool _authenticated;
+    std::string _readBuffer;
     std::string _expectedPassword; // Mot de passe attendu, fourni par le serveur
-    bool _welcomeSent;
-    ClientState state;
+    ClientState _state;
 
     static unsigned int s_nextId; // Compteur statique pour générer les IDs uniques
 
@@ -34,25 +35,26 @@ public:
     Client(Client const& copy);
     Client &operator=(Client const& copy);
     
+    //Getters de client
     int getFd() const;
-    unsigned int getId() const;    // Accesseur pour l'identifiant unique
     int getPort() const;
     std::string getNickname() const;
     std::string getUsername() const;
     std::string getHostname() const;
+    std::string getExpectedPassword() const;
+    unsigned int getId() const;    // Accesseur pour l'identifiant unique
+    ClientState getState() const { return _state; }
     
+    //Setters de client
     void setNickname(std::string &Nickname);
     void setUsername(std::string &Username);
+    void setState(ClientState newState) { _state = newState; }
+    void setWelcomeReceived(bool val) { _welcomeSent = val; }
     
     // La méthode authenticate compare le mot de passe fourni avec celui stocké
     void authenticate(const std::string &password);
     bool isAuthenticated() const;
-    
-    // Getter pour le mot de passe attendu
-    std::string getExpectedPassword() const;
-    
+
+    //Méthodes pour welcome
     bool hasReceivedWelcome() const { return _welcomeSent; }
-    void setWelcomeReceived(bool val) { _welcomeSent = val; }
-    ClientState getState() const { return state; }
-    void setState(ClientState newState) { state = newState; }
 };
