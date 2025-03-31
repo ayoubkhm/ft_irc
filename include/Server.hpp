@@ -46,6 +46,7 @@ public:
     //Méthode clients
     void kickClient(int fd, const std::string &channelName, int targetFd);
     bool checkDuplicateClient(std::string const nickClient);
+    void removeClient(int fd, size_t index);
 
 private:
     int server_fd;

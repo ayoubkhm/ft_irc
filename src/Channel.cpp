@@ -1,13 +1,13 @@
 #include "Channel.hpp"
 
 Channel::Channel(const std::string& channelName, size_t maxClients)
-    : _name(channelName),
-      _topic(""),
-      _maxClients(maxClients),
+    : _userLimit(0),
       _inviteOnly(false),
       _topicRestricted(false),
+      _name(channelName),
+      _topic(""),
       _key(""),
-      _userLimit(0)
+      _maxClients(maxClients)
 {
 }
 
@@ -15,16 +15,17 @@ Channel::~Channel() {
 }
 
 Channel::Channel(const Channel& other)
-    : _name(other._name),
+    :
+      _userLimit(other._userLimit),
+      _inviteOnly(other._inviteOnly),
+      _topicRestricted(other._topicRestricted),
+      _name(other._name),
       _topic(other._topic),
+      _key(other._key),
       _clients(other._clients),
       _operators(other._operators),
       _invitedIds(other._invitedIds),
-      _maxClients(other._maxClients),
-      _inviteOnly(other._inviteOnly),
-      _topicRestricted(other._topicRestricted),
-      _key(other._key),
-      _userLimit(other._userLimit)
+      _maxClients(other._maxClients)
 {
 }
 
