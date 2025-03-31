@@ -6,7 +6,7 @@ unsigned int Client::s_nextId = 1; // On peut démarrer à 1 par exemple
 // Constructeur principal avec mot de passe attendu
 Client::Client(int fd, const std::string &expectedPassword)
     : _fd(fd), _id(s_nextId++), _port(0), _Nickname(""), _Username(""), _Host(""), 
-      _authenticated(false), _expectedPassword(expectedPassword), _welcomeSent(false), state(WAITING_FOR_PASS)
+      _authenticated(false), _expectedPassword(expectedPassword), _welcomeSent(false), _state(WAITING_FOR_PASS)
 {
 }
 
@@ -27,7 +27,7 @@ Client::Client(Client const & copy)
       _authenticated(copy._authenticated),
       _expectedPassword(copy._expectedPassword),  
       _welcomeSent(copy._welcomeSent),
-      state(copy.state)
+      _state(copy._state)
 {
 }
 
@@ -45,7 +45,7 @@ Client & Client::operator=(Client const & other)
         _authenticated = other._authenticated;
         _expectedPassword = other._expectedPassword;
         _welcomeSent = other._welcomeSent;
-        state = other.state;
+        _state = other._state;
     }
     return *this;
 }
