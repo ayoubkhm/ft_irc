@@ -59,10 +59,4 @@ public:
     bool hasReceivedWelcome() const { return _welcomeSent; }
 
     //Méthodes pour les Ctrl + D
-    void appendToBuffer(const std::string& data);
-    bool hasCompleteCommand() const;
-    std::string extractNextCommand();
-    std::string getBuffer() const { return _readBuffer; };
-    void clearBuffer() { _readBuffer.clear();};
-
 };

@@ -151,51 +151,59 @@ void Server::removeClient(int fd, size_t index)
 void Server::handleClientMessage(size_t index)
 {
     char buffer[1024];
-    int fd = pollfds[index].fd;
+    int bytes_read = read(pollfds[index].fd, buffer, sizeof(buffer) - 1);
     
-    int bytes_read = read(fd, buffer, sizeof(buffer) - 1);
-
     if (bytes_read < 0)
     {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return; // Pas d'erreur critique
-        
-        std::cerr << "Erreur de lecture sur FD " << fd << ": " << strerror(errno) << "\n";
-        removeClient(fd, index);
-        return;
-    }
-
-    // Recherche du client
-    std::map<int, Client*>::iterator it = _ClientBook.find(fd);
-    if (it == _ClientBook.end())
-    {
-        std::cerr << "Erreur: client non trouvé pour FD " << fd << "\n";
-        return;
-    }
-
-    Client* client = it->second; 
-
-    if (bytes_read == 0) // Ctrl+D détecté
-    {
-        std::cout << "Client FD " << fd << " a envoyé un EOF (Ctrl+D), envoi du buffer accumulé.\n";
-        std::string clientBuffer = client->getBuffer();
-        if (!clientBuffer.empty()) 
         {
-            parseAndDispatch(this, client, clientBuffer); // Envoie le buffer accumulé
-            client->clearBuffer(); // Vide après traitement
+            return;
+        }
+        std::cerr << "Erreur de lecture sur FD " << pollfds[index].fd << ": " << strerror(errno) << "\n";
+        int fd = pollfds[index].fd;
+        close(fd);
+        pollfds.erase(pollfds.begin() + index);
+        std::map<int, Client*>::iterator it = _ClientBook.find(fd);
+        if (it != _ClientBook.end())
+        {
+            delete it->second;
+            _ClientBook.erase(it);
         }
         return;
     }
-
-    // Ajout des nouvelles données reçues dans le buffer du client
-    buffer[bytes_read] = '\0';
-    client->appendToBuffer(buffer);
-
-    // Vérifie si on a reçu une commande complète
-    if (client->getBuffer().find("\n") != std::string::npos)
+    else if (bytes_read == 0)
     {
-        parseAndDispatch(this, client, client->getBuffer()); // Envoi pour traitement
-        client->clearBuffer(); // Reset après traitement
+        std::cout << "Client FD " << pollfds[index].fd << " déconnecté (EOF).\n";
+        int fd = pollfds[index].fd;
+        close(fd);
+        pollfds.erase(pollfds.begin() + index);
+        std::map<int, Client*>::iterator it = _ClientBook.find(fd);
+        if (it != _ClientBook.end())
+        {
+            delete it->second;
+            _ClientBook.erase(it);
+        }
+        return;
+    }
+    
+    buffer[bytes_read] = '\0';
+    std::cout << "Message reçu de FD " << pollfds[index].fd << ": " << buffer;
+    
+    int fd = pollfds[index].fd;
+    Client* client = NULL;
+    std::map<int, Client*>::iterator it = _ClientBook.find(fd);
+    if (it != _ClientBook.end())
+    {
+        client = it->second;
+    }
+    
+    if (client != NULL)
+    {
+        parseAndDispatch(this, client, std::string(buffer));
+    }
+    else
+    {
+        std::cerr << "Erreur: client non trouvé pour FD " << fd << "\n";
     }
 }
 
