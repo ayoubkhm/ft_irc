@@ -108,28 +108,3 @@ std::string Client::getExpectedPassword() const
 {
     return _expectedPassword;
 }
-
-void Client::appendToBuffer(const std::string& data)
-{
-    _readBuffer += data;
-}
-
-bool Client::hasCompleteCommand() const
-{
-    return _readBuffer.find("\n") != std::string::npos;
-}
-std::string Client::extractNextCommand()
-{
-    size_t pos = _readBuffer.find("\n");
-    if (pos == (size_t)-1)
-        return "";
-
-    std::string command = _readBuffer.substr(0, pos); // 🔹 Prend la première commande
-    _readBuffer.erase(0, pos + 1); // 🔹 Supprime la commande extraite du buffer
-
-    if (!command.empty() && command[command.size() - 1] == '\r') 
-        command.erase(command.size() - 1);
-
-    return command;
-}
-
