@@ -22,8 +22,7 @@ class Server
 public:
     Server(int port, const std::string &password, struct tm *timeinfo);
     ~Server();
-    Server(Server const& copy);
-    Server &operator=(Server const& copy);
+
 
     void run();
 
@@ -56,8 +55,11 @@ private:
     std::vector<struct pollfd> pollfds;
     std::map<int, Client*> _ClientBook;  // Clé = FD, valeur = Client*
     std::map<std::string, Channel> _Channels;
+    std::map<int, std::string> _clientBuffers;
 
     void initServer();
     void handleNewConnection();
     void handleClientMessage(size_t index);
+    Server(Server const& copy);
+    Server &operator=(Server const& copy);
 };
