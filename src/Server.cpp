@@ -1,7 +1,15 @@
 #include "Server.hpp"
 #include "Command.hpp"
 #include "IRCUtils.hpp"
-
+#include <iostream>
+#include <csignal>
+#include <cstdlib>
+#include <cstring>
+#include <fcntl.h>
+#include <poll.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 extern volatile bool g_running;
 
@@ -14,26 +22,28 @@ Server::Server(int port, const std::string &password, struct tm *timeinfo)
 
 Server::~Server()
 {
-    // Ferme toutes les sockets du poll
+    // On ferme toutes les sockets présentes dans pollfds (sauf STDIN)
     for (size_t i = 0; i < pollfds.size(); ++i)
     {
-        close(pollfds[i].fd);
+        if (pollfds[i].fd != STDIN_FILENO)
+            close(pollfds[i].fd);
     }
     
-    // Libère les clients
+    // Libération des clients
     for (std::map<int, Client*>::iterator it = _ClientBook.begin(); it != _ClientBook.end(); ++it)
     {
         delete it->second;
     }
 }
 
+// Constructeur de copie et opérateur d'affectation (attention : copie superficielle)
 Server::Server(const Server &other)
 : server_fd(other.server_fd),
   port(other.port),
   password(other.password),      
   pollfds(other.pollfds),        
   _ClientBook(other._ClientBook),
-  _Channels(other._Channels)     
+  _Channels(other._Channels)
 {
 }  
 
@@ -43,7 +53,7 @@ Server& Server::operator=(const Server &other) {
         port = other.port;
         password = other.password;
         pollfds = other.pollfds;
-        _ClientBook = other._ClientBook;  // shallow copy
+        _ClientBook = other._ClientBook;  // copie superficielle
         _Channels = other._Channels;
     }
     return *this;
@@ -94,10 +104,18 @@ void Server::initServer()
     }
     
     std::cout << "Serveur initialisé sur le port " << port << " avec le mot de passe '" << password << "'\n";
+    
+    // On ajoute la socket serveur dans pollfds (index 0)
     struct pollfd pfd;
     pfd.fd = server_fd;
     pfd.events = POLLIN;
     pollfds.push_back(pfd);
+    
+    // On ajoute STDIN_FILENO dans pollfds pour gérer Ctrl+D côté serveur (index 1)
+    struct pollfd stdin_pfd;
+    stdin_pfd.fd = STDIN_FILENO;
+    stdin_pfd.events = POLLIN;
+    pollfds.push_back(stdin_pfd);
 }
 
 void Server::handleNewConnection()
@@ -126,7 +144,6 @@ void Server::handleNewConnection()
     
     std::cout << "Nouvelle connexion, FD = " << client_fd << "\n";
     _ClientBook[client_fd] = new Client(client_fd, password);
-    // displayRegistrationInstructions(_ClientBook[client_fd]);
 }
 
 void Server::removeClient(int fd, size_t index)
@@ -134,7 +151,7 @@ void Server::removeClient(int fd, size_t index)
     std::cout << "Déconnexion du client FD " << fd << ".\n";
     close(fd);
 
-    // Supprime le client du vecteur pollfds
+    // Supprime la socket du client du vecteur pollfds
     if (index < pollfds.size())
         pollfds.erase(pollfds.begin() + index);
 
@@ -147,67 +164,51 @@ void Server::removeClient(int fd, size_t index)
     }
 }
 
-
 void Server::handleClientMessage(size_t index)
 {
+    int fd = pollfds[index].fd;
     char buffer[1024];
-    int bytes_read = read(pollfds[index].fd, buffer, sizeof(buffer) - 1);
+    int bytes_read = read(fd, buffer, sizeof(buffer) - 1);
     
     if (bytes_read < 0)
     {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
-        {
             return;
-        }
-        std::cerr << "Erreur de lecture sur FD " << pollfds[index].fd << ": " << strerror(errno) << "\n";
-        int fd = pollfds[index].fd;
-        close(fd);
-        pollfds.erase(pollfds.begin() + index);
-        std::map<int, Client*>::iterator it = _ClientBook.find(fd);
-        if (it != _ClientBook.end())
-        {
-            delete it->second;
-            _ClientBook.erase(it);
-        }
+        std::cerr << "Erreur de lecture sur FD " << fd << ": " << strerror(errno) << "\n";
+        removeClient(fd, index);
         return;
     }
     else if (bytes_read == 0)
     {
-        std::cout << "Client FD " << pollfds[index].fd << " déconnecté (EOF).\n";
-        int fd = pollfds[index].fd;
-        close(fd);
-        pollfds.erase(pollfds.begin() + index);
-        std::map<int, Client*>::iterator it = _ClientBook.find(fd);
-        if (it != _ClientBook.end())
-        {
-            delete it->second;
-            _ClientBook.erase(it);
-        }
+        // En cas d'EOF, on jette toute commande incomplète
+        _clientBuffers.erase(fd);
+        std::cout << "Client FD " << fd << " déconnecté (EOF).\n";
+        removeClient(fd, index);
         return;
     }
     
     buffer[bytes_read] = '\0';
-    std::cout << "Message reçu de FD " << pollfds[index].fd << ": " << buffer;
+    _clientBuffers[fd] += std::string(buffer);
     
-    int fd = pollfds[index].fd;
-    Client* client = NULL;
-    std::map<int, Client*>::iterator it = _ClientBook.find(fd);
-    if (it != _ClientBook.end())
+    // Traiter uniquement les lignes complètes (terminées par '\n')
+    size_t pos;
+    while ((pos = _clientBuffers[fd].find('\n')) != std::string::npos)
     {
-        client = it->second;
-    }
-    
-    if (client != NULL)
-    {
-        parseAndDispatch(this, client, std::string(buffer));
-    }
-    else
-    {
-        std::cerr << "Erreur: client non trouvé pour FD " << fd << "\n";
+        std::string line = _clientBuffers[fd].substr(0, pos + 1);
+        _clientBuffers[fd].erase(0, pos + 1);
+        
+        // Retirer le '\r' en fin de ligne si nécessaire
+        if (!line.empty() && line[line.size() - 1] == '\n')
+        {
+            if (line.size() > 1 && line[line.size() - 2] == '\r')
+                line.erase(line.size() - 2, 1);
+        }
+        
+        // On traite la commande seulement si elle n'est pas vide
+        if (!line.empty())
+            parseAndDispatch(this, getClientByFd(fd), line);
     }
 }
-
-
 
 void Server::broadcastToChannel(const std::string &channelName, const std::string &message, int senderFd)
 {
@@ -223,14 +224,11 @@ void Server::broadcastToChannel(const std::string &channelName, const std::strin
     if (sender)
         senderId = sender->getId();
     
-    // Parcours de tous les IDs clients dans le channel
     const std::set<unsigned int>& clientIds = channel.getClientIds();
     for (std::set<unsigned int>::const_iterator itId = clientIds.begin(); itId != clientIds.end(); ++itId)
     {
         if (*itId == senderId)
             continue;
-        
-        // Recherche du client correspondant dans _ClientBook
         for (std::map<int, Client*>::iterator itClient = _ClientBook.begin(); itClient != _ClientBook.end(); ++itClient)
         {
             if (itClient->second->getId() == *itId)
@@ -281,7 +279,6 @@ void Server::joinChannel(int fd, const std::string& channelName)
     bool newlyCreated = false;
     if (it == _Channels.end())
     {
-        // Créer le channel automatiquement
         Channel newChannel(channelName);
         _Channels.insert(std::make_pair(channelName, newChannel));
         std::cout << "Channel " << channelName << " créé automatiquement." << std::endl;
@@ -292,15 +289,13 @@ void Server::joinChannel(int fd, const std::string& channelName)
     Channel& channel = it->second;
     if (!channel.isClientInChannel(clientId))
     {
-        if (channel.addClient(clientId) == true)
+        if (channel.addClient(clientId))
             std::cout << "Le client avec ID " << clientId << " a rejoint le channel " << channelName << ".\n";
     }
     
-    // Si le channel vient d'être créé, le rendre opérateur
     if (newlyCreated)
     {
         channel.addOperator(clientId);
-        //sendResponse(client, "NOTICE * :Vous êtes le créateur du channel " + channelName + " et vous êtes opérateur.");
     }
 }
 
@@ -342,19 +337,16 @@ void Server::kickClient(int fd, const std::string& channelName, int targetFd)
     std::cout << "Le client avec ID " << targetId << " a été expulsé du channel " << channelName << ".\n";
 }
 
-std::string Server::getDateTime () const
+std::string Server::getDateTime() const
 {
-    return (_datetime);
+    return _datetime;
 }
 
 void Server::setDatetime(struct tm *timeinfo)
 {
-	char buffer[80];
-
-	strftime(buffer,sizeof(buffer),"%d-%m-%Y %H:%M:%S",timeinfo);
-  	std::string str(buffer);
-
-	_datetime = str;
+    char buffer[80];
+    strftime(buffer, sizeof(buffer), "%d-%m-%Y %H:%M:%S", timeinfo);
+    _datetime = std::string(buffer);
 }
 
 int Server::getFdByNickname(const std::string &nickname)
@@ -371,9 +363,7 @@ Client* Server::getClientByFd(int fd)
 {
     std::map<int, Client*>::iterator it = _ClientBook.find(fd);
     if (it != _ClientBook.end())
-    {
         return it->second;
-    }
     return NULL;
 }
 
@@ -381,9 +371,7 @@ Channel* Server::getChannelByName(const std::string& channelName)
 {
     std::map<std::string, Channel>::iterator it = _Channels.find(channelName);
     if (it != _Channels.end())
-    {
         return &it->second;
-    }
     return NULL;
 }
 
@@ -416,17 +404,41 @@ void Server::run()
             handleNewConnection();
         }
         
-        size_t clientCount = pollfds.size();
-        size_t i = 1;
-        while (i < clientCount)
+        // Gestion de STDIN pour le serveur (index 1)
+        if (pollfds[1].revents & POLLIN)
         {
-            if (i >= pollfds.size())
-                break;
+            char input_buffer[1024];
+            int bytes = read(STDIN_FILENO, input_buffer, sizeof(input_buffer) - 1);
+            if (bytes <= 0)
+            {
+                std::cout << "Ctrl+D détecté sur le serveur. Arrêt...\n";
+                g_running = false;
+            }
+            else
+            {
+                input_buffer[bytes] = '\0';
+                std::cout << "Commande serveur: " << input_buffer;
+                // Traitement éventuel des commandes serveur...
+            }
+        }
+        
+        // Gestion des clients (indices ≥ 2)
+        for (int i = pollfds.size() - 1; i >= 2; --i)
+        {
             if (pollfds[i].revents & POLLIN)
             {
                 handleClientMessage(i);
             }
-            i++;
         }
+    }
+    
+    // Fermer proprement la socket serveur avant la destruction
+    if (server_fd != -1)
+    {
+        close(server_fd);
+        server_fd = -1;
+        // On retire la socket serveur du vecteur pollfds
+        if (!pollfds.empty() && pollfds[0].fd != STDIN_FILENO)
+            pollfds.erase(pollfds.begin());
     }
 }
