@@ -8,7 +8,7 @@ volatile bool g_running = true;
 
 void signal_handler(int signal)
 {
-    if (signal == SIGINT || signal == SIGTERM)
+    if (signal == SIGINT || signal == SIGTERM || signal == SIGTSTP)
     {
         std::cout << "\nSignal de fermeture reçu, arrêt du serveur...\n";
         g_running = false;
@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     sa.sa_flags = 0;
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
-    
+    sigaction(SIGTSTP, &sa, NULL);
     int port = std::atoi(argv[1]);
     if (port <= 0 || port > 65535)
     {
