@@ -174,37 +174,43 @@ void Server::handleClientMessage(size_t index)
     {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
             return;
-        std::cerr << "Erreur de lecture sur FD " << fd << ": " << strerror(errno) << "\n";
+        std::cerr << "Erreur de lecture sur FD " << fd << ": " << strerror(errno) << std::endl;
         removeClient(fd, index);
         return;
     }
     else if (bytes_read == 0)
     {
-        // En cas d'EOF, on jette toute commande incomplète
+        // Si on reçoit EOF deux fois de suite, on ignore simplement (ne pas crash)
+        if (_clientBuffers[fd].empty())
+        {
+            std::cout << "Client FD " << fd << " envoie EOF sans donnée." << std::endl;
+            removeClient(fd,index);
+            return;
+        }
+
+        // Sinon, suppression du client
+        std::cout << "Client FD " << fd << " déconnecté (EOF)." << std::endl;
         _clientBuffers.erase(fd);
-        std::cout << "Client FD " << fd << " déconnecté (EOF).\n";
         removeClient(fd, index);
         return;
     }
-    
+
+    // Ajoute les données reçues au buffer
     buffer[bytes_read] = '\0';
     _clientBuffers[fd] += std::string(buffer);
-    
-    // Traiter uniquement les lignes complètes (terminées par '\n')
+
+    // Traiter uniquement les lignes complètes
     size_t pos;
     while ((pos = _clientBuffers[fd].find('\n')) != std::string::npos)
     {
-        std::string line = _clientBuffers[fd].substr(0, pos + 1);
-        _clientBuffers[fd].erase(0, pos + 1);
-        
-        // Retirer le '\r' en fin de ligne si nécessaire
-        if (!line.empty() && line[line.size() - 1] == '\n')
-        {
-            if (line.size() > 1 && line[line.size() - 2] == '\r')
-                line.erase(line.size() - 2, 1);
-        }
-        
-        // On traite la commande seulement si elle n'est pas vide
+        std::string line = _clientBuffers[fd].substr(0, pos); // Récupère la ligne sans le '\n'
+        _clientBuffers[fd].erase(0, pos + 1); // Supprime la ligne traitée du buffer
+
+        // Supprime le '\r' à la fin si présent
+        if (!line.empty() && line[line.size() - 1] == '\r')
+            line.erase(line.size() - 1);
+
+        // Vérifie que la ligne n'est pas vide avant de la traiter
         if (!line.empty())
             parseAndDispatch(this, getClientByFd(fd), line);
     }
